@@ -1,7 +1,8 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const { archivePrintedReceipt, openReceiptsFolder } = require("./receipts.cjs");
 
 const PORT = 0;
 const DIST_DIR = path.join(__dirname, "..", "dist");
@@ -58,6 +59,49 @@ function startStaticServer() {
   });
 }
 
+
+function registerIpcHandlers() {
+  if (registerIpcHandlers.registered) return;
+  registerIpcHandlers.registered = true;
+
+  ipcMain.handle("kings-food:get-printers", async (event) => {
+    const printers = await event.sender.getPrintersAsync();
+    return printers.map((printer) => ({
+      name: printer.name,
+      displayName: printer.displayName,
+      description: printer.description,
+      status: printer.status,
+      isDefault: printer.isDefault,
+    }));
+  });
+
+  ipcMain.handle("kings-food:print-receipt", async (event, options = {}) => {
+    return await new Promise((resolve) => {
+      const printerName = typeof options.printerName === "string" ? options.printerName.trim() : "";
+      const printOptions = {
+        silent: true,
+        printBackground: true,
+        color: true,
+        margins: { marginType: "none" },
+        ...(printerName ? { deviceName: printerName } : {}),
+      };
+
+      event.sender.print(printOptions, (success, failureReason) => {
+        resolve({
+          success,
+          failureReason: success ? null : failureReason || "Windows could not print the receipt.",
+        });
+      });
+    });
+  });
+
+  ipcMain.handle("kings-food:archive-receipt", async (_event, payload) => {
+    return await archivePrintedReceipt(payload);
+  });
+
+  ipcMain.handle("kings-food:open-receipts-folder", async () => openReceiptsFolder());
+}
+
 async function createWindow() {
   const server = await startStaticServer();
   const address = server.address();
@@ -71,6 +115,7 @@ async function createWindow() {
     backgroundColor: "#fffaf4",
     autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -82,7 +127,10 @@ async function createWindow() {
   window.on("closed", () => server.close());
 }
 
-app.whenReady().then(() => createWindow()).catch((error) => {
+app.whenReady().then(() => {
+  registerIpcHandlers();
+  return createWindow();
+}).catch((error) => {
   console.error("Kings Food POS failed to start:", error);
   app.quit();
 });
