@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { DEFAULT_SETTINGS, getSettings, listSpendings, saveSpending, deleteSpending, type Spending } from "@/lib/db";
+import { DEFAULT_SETTINGS, getSettings, listSpendings, saveSpending, deleteSpending, uid, type Spending } from "@/lib/db";
 import { dateOf, fcfa, makeRef, timeOf } from "@/lib/kings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ function SpendingPage(){
  const [description,setDescription]=useState(""),[category,setCategory]=useState(CATEGORIES[0]),[amount,setAmount]=useState(""),[vendor,setVendor]=useState(""),[paymentMethod,setPaymentMethod]=useState("cash"),[notes,setNotes]=useState(""),[receipt,setReceipt]=useState<Spending|null>(null);
  const now=Date.now(), daily=useMemo(()=>spendings.filter(s=>day(s.createdAt,now)),[spendings,now]), monthly=useMemo(()=>spendings.filter(s=>month(s.createdAt,now)),[spendings,now]), yearly=useMemo(()=>spendings.filter(s=>year(s.createdAt,now)),[spendings,now]);
  const sum=(xs:Spending[])=>xs.reduce((a,s)=>a+s.amount,0);
- const create=useMutation({mutationFn:async()=>{const n=Number(amount);if(!description.trim()||!Number.isFinite(n)||n<=0)throw new Error("Enter a description and valid amount.");const s:Spending={id:crypto.randomUUID(),ref:makeRef(),description:description.trim(),category,amount:Math.round(n),vendor:vendor.trim()||undefined,paymentMethod,notes:notes.trim()||undefined,createdAt:Date.now()};await saveSpending(s);return s},onSuccess:s=>{qc.invalidateQueries({queryKey:["spendings"]});setDescription("");setAmount("");setVendor("");setNotes("");setReceipt(s);toast.success("Spending recorded")},onError:e=>toast.error(e instanceof Error?e.message:"Could not save spending")});
+ const create=useMutation({mutationFn:async()=>{const n=Number(amount);if(!description.trim()||!Number.isFinite(n)||n<=0)throw new Error("Enter a description and valid amount.");const s:Spending={id:uid(),ref:makeRef(),description:description.trim(),category,amount:Math.round(n),vendor:vendor.trim()||undefined,paymentMethod,notes:notes.trim()||undefined,createdAt:Date.now()};await saveSpending(s);return s},onSuccess:s=>{qc.invalidateQueries({queryKey:["spendings"]});setDescription("");setAmount("");setVendor("");setNotes("");setReceipt(s);toast.success("Spending recorded")},onError:e=>toast.error(e instanceof Error?e.message:"Could not save spending")});
  return <div className="space-y-5">
   <div><p className="text-sm text-muted-foreground">Restaurant expenses</p><h1 className="font-display text-2xl font-extrabold">Spending</h1></div>
   <section className="rounded-2xl bg-card p-4 shadow-soft"><h2 className="font-display font-bold">Record a spending</h2><div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -39,7 +39,7 @@ function SpendingPage(){
   {receipt&&<div className="receipt-print"><SpendingReceipt spending={receipt} settings={settings}/></div>}
  </div>
 }
-function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>}
+function Field({label,children}:{label:string;children:ReactNode}){return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>}
 function Summary({title,amount}:{title:string;amount:number}){return <div className="rounded-2xl bg-card p-4 shadow-soft"><p className="text-xs text-muted-foreground">{title} spending</p><p className="font-display text-xl font-extrabold text-destructive">{fcfa(amount)}</p></div>}
 function SpendingReceipt({spending,settings}:{spending:Spending;settings:typeof DEFAULT_SETTINGS}){const m=settings.payments.find(p=>p.id===spending.paymentMethod);return <div className="receipt-content space-y-3 rounded-lg border border-dashed border-border bg-card p-4 text-sm"><div className="text-center"><img src="/icons/kf-mark.png" alt="" width="48" height="48" className="mx-auto size-12 object-contain"/><p className="font-display text-lg font-extrabold uppercase">{settings.businessName}</p><p className="text-xs text-muted-foreground">{settings.address}</p><p className="mt-2 text-xs font-bold">SPENDING RECEIPT</p><p className="text-xs text-muted-foreground">{spending.ref} · {dateOf(spending.createdAt)} {timeOf(spending.createdAt)}</p></div><div className="space-y-2 border-y border-dashed border-border py-3"><Row label="Description" value={spending.description}/><Row label="Category" value={spending.category}/>{spending.vendor&&<Row label="Supplier / recipient" value={spending.vendor}/>} {m&&<Row label="Payment" value={m.name}/>}<Row label="Amount" value={fcfa(spending.amount)}/>{spending.notes&&<Row label="Notes" value={spending.notes}/>}</div><p className="text-center text-[11px] text-muted-foreground">{settings.receiptFooter}</p></div>}
 function Row({label,value}:{label:string;value:string}){return <div className="flex justify-between gap-4 text-xs"><span className="text-muted-foreground">{label}</span><span className="text-right font-semibold">{value}</span></div>}
