@@ -61,6 +61,18 @@ export type PaymentMethod = {
 
 export type Zone = { name: string; fee: number };
 
+export type Spending = {
+  id: string;
+  ref: string;
+  description: string;
+  category: string;
+  amount: number;
+  paymentMethod?: string;
+  vendor?: string;
+  notes?: string;
+  createdAt: number;
+};
+
 export type Settings = {
   id: "main";
   businessName: string;
@@ -108,6 +120,7 @@ interface KingsDB extends DBSchema {
   categories: { key: string; value: Category };
   dishes: { key: string; value: Dish; indexes: { byCategory: string } };
   orders: { key: string; value: Order; indexes: { byCreatedAt: number } };
+  spendings: { key: string; value: Spending; indexes: { byCreatedAt: number } };
 }
 
 let dbPromise: Promise<IDBPDatabase<KingsDB>> | null = null;
@@ -116,7 +129,7 @@ export const hasIDB = () => typeof indexedDB !== "undefined";
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<KingsDB>("kings-food", 5, {
+    dbPromise = openDB<KingsDB>("kings-food", 6, {
       upgrade(db, oldVersion, _newVersion, transaction) {
         if (oldVersion < 2 && !db.objectStoreNames.contains("settings")) {
           db.createObjectStore("settings", { keyPath: "id" });
@@ -147,6 +160,16 @@ function getDB() {
             }
           });
         }
+        if (oldVersion < 6) {
+          if (!db.objectStoreNames.contains("spendings")) {
+            const spendings = db.createObjectStore("spendings", { keyPath: "id" });
+            spendings.createIndex("byCreatedAt", "createdAt");
+          }
+          const categories = transaction.objectStore("categories");
+          void categories.get("c-cakes").then((category) => {
+            if (!category) void categories.put({ id: "c-cakes", name: "Cakes", createdAt: Date.now() + 3 });
+          });
+        }
         if (oldVersion >= 1 && oldVersion < 5) {
           const categories = transaction.objectStore("categories");
           const dishes = transaction.objectStore("dishes");
@@ -173,6 +196,7 @@ async function seed(db: IDBPDatabase<KingsDB>) {
     { id: "c-plats", name: "Main Dishes", createdAt: now },
     { id: "c-grillades", name: "Grills", createdAt: now + 1 },
     { id: "c-boissons", name: "Drinks", createdAt: now + 2 },
+    { id: "c-cakes", name: "Cakes", createdAt: now + 3 },
   ];
   const dishes: Dish[] = [
     {
@@ -289,4 +313,21 @@ export async function getSettings(): Promise<Settings> {
 export async function saveSettings(s: Settings) {
   const db = await getDB();
   await db.put("settings", s);
+}
+
+/* spendings */
+export async function listSpendings(): Promise<Spending[]> {
+  if (!hasIDB()) return [];
+  const db = await getDB();
+  return (await db.getAll("spendings")).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function saveSpending(s: Spending) {
+  const db = await getDB();
+  await db.put("spendings", s);
+}
+
+export async function deleteSpending(id: string) {
+  const db = await getDB();
+  await db.delete("spendings", id);
 }
