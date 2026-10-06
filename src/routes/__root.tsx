@@ -8,7 +8,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { ChefHat, ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon } from "lucide-react";
+import { ChefHat, ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards } from "lucide-react";
 import textLogo from "@/assets/kf-text-logo.png.asset.json";
 
 import appCss from "../styles.css?url";
@@ -121,6 +121,7 @@ const NAV = [
   { to: "/kitchen", label: "Kitchen", icon: ChefHat },
   { to: "/menu", label: "Menu", icon: LayoutGrid },
   { to: "/sales", label: "Sales", icon: BarChart3 },
+  { to: "/spending", label: "Spending", icon: WalletCards },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 
@@ -175,7 +176,7 @@ function RootComponent() {
         </main>
 
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden no-print">
-          <ul className="grid grid-cols-5">
+          <ul className="grid grid-cols-6">
             {NAV.map(({ to, label, icon: Icon }) => (
               <li key={to}>
                 <Link
