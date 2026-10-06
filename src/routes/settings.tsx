@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DEFAULT_SETTINGS, getSettings, saveSettings, uid, type Settings } from "@/lib/db";
 import { fileToDataUrl } from "@/lib/kings";
 import { setLang, useLang } from "@/lib/i18n";
+import { getDesktopPrinters, type DesktopPrinter } from "@/lib/desktop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,9 +31,24 @@ function SettingsPage() {
   const lang = useLang();
   const { data } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
   const [s, setS] = useState<Settings>(DEFAULT_SETTINGS);
+  const [printers, setPrinters] = useState<DesktopPrinter[]>([]);
+  const [loadingPrinters, setLoadingPrinters] = useState(false);
   useEffect(() => {
     if (data) setS(data);
   }, [data]);
+
+  const refreshPrinters = async () => {
+    setLoadingPrinters(true);
+    try {
+      setPrinters(await getDesktopPrinters());
+    } finally {
+      setLoadingPrinters(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshPrinters();
+  }, []);
 
   const save = async () => {
     await saveSettings(s);
@@ -50,6 +66,53 @@ function SettingsPage() {
   return (
     <div className="space-y-6 pb-8">
       <h1 className="font-display text-2xl font-extrabold">Settings</h1>
+
+      <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display font-bold">Receipt printer</h2>
+            <p className="text-xs text-muted-foreground">The Windows app prints receipts directly to this printer. Leave it on Windows default when using one main POS printer.</p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-9 items-center gap-2 rounded-full border border-border px-3 text-sm font-semibold"
+            onClick={() => void refreshPrinters()}
+            disabled={loadingPrinters}
+          >
+            <RefreshCw className={`size-4 ${loadingPrinters ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
+        {printers.length ? (
+          <select
+            value={s.printerName ?? ""}
+            onChange={(e) => setS({ ...s, printerName: e.target.value })}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Windows default printer</option>
+            {printers.map((printer) => (
+              <option key={printer.name} value={printer.name}>
+                {printer.displayName || printer.name}{printer.isDefault ? " (Default)" : ""}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+            No printer list is available in the browser/PWA. The installed Windows app will use the Windows default printer unless you select one here.
+          </div>
+        )}
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-2 rounded-full border border-border px-3 text-sm font-semibold"
+          onClick={() => void window.kingsFoodDesktop?.openReceiptsFolder()}
+          disabled={!window.kingsFoodDesktop}
+        >
+          <FolderOpen className="size-4" /> Open Excel receipts folder
+        </button>
+        <p className="text-xs text-muted-foreground">
+          Every successful printed receipt is archived automatically into a daily Excel workbook in your Windows Documents/Kings Food POS/Receipts folder.
+        </p>
+      </section>
 
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
         <h2 className="font-display font-bold">Language</h2>
