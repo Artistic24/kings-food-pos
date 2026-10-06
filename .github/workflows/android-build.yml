@@ -66,7 +66,7 @@ jobs:
       - name: Create temporary release signing key
         env:
           KEYSTORE_PASSWORD: kings-food-release-${{ github.run_id }}
-          KEY_PASSWORD: kings-food-key-${{ github.run_id }}
+          KEY_PASSWORD: kings-food-release-${{ github.run_id }}
         run: |
           keytool -genkeypair -v \
             -keystore "$RUNNER_TEMP/kings-food-release.jks" \
@@ -81,7 +81,7 @@ jobs:
       - name: Sign release APK
         env:
           KEYSTORE_PASSWORD: kings-food-release-${{ github.run_id }}
-          KEY_PASSWORD: kings-food-key-${{ github.run_id }}
+          KEY_PASSWORD: kings-food-release-${{ github.run_id }}
         run: |
           UNSIGNED="android/app/build/outputs/apk/release/app-release-unsigned.apk"
           if [ ! -f "$UNSIGNED" ]; then
