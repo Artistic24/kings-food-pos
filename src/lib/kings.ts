@@ -8,8 +8,17 @@ export const dateOf = (ts: number) =>
 
 export const isSameDay = (a: number, b: number) => new Date(a).toDateString() === new Date(b).toDateString();
 
-export const makeRef = () =>
-  `KF-${new Date().toISOString().slice(5, 10).replace("-", "")}-${Math.floor(Math.random() * 9000 + 1000)}`;
+export const makeRef = () => {
+  const now = new Date();
+  const dayLetter = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(now).slice(0, 1).toUpperCase();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = String(now.getFullYear()).slice(-2);
+  const key = `kings-food-ref-${year}${month}${day}`;
+  const next = Number(localStorage.getItem(key) ?? "0") + 1;
+  localStorage.setItem(key, String(next));
+  return `KF-${dayLetter}${day}${month}${year}-${String(next).padStart(3, "0")}`;
+};
 
 export const STATUS_LABEL: Record<string, string> = {
   new: "New",
