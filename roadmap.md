@@ -1,0 +1,15 @@
+# Kings Food roadmap
+- [x] IndexedDB data layer, PWA offline + install button
+- [x] POS ordering (table / Yaoundé delivery zones), cart, receipt
+- [x] Kitchen view, sales history + daily report
+- [x] Menu management (categories, dishes with photo)
+- [x] English-only UI
+- [x] Use uploaded KF logo + text logo, match screenshot palette (cream, deep orange, brown, Cameroon stripe)
+- [x] Settings page: business info, payment methods (QR image or auto QR), delivery zones, tax
+- [x] QR pay section in POS checkout/receipt
+- [x] Desktop/Windows layout (installable via Edge/Chrome)
+- [x] Repair receipt preview and print layout
+- [x] Add five dishes per category, including existing offline installs
+- [x] Generate Windows icon from Kings Food logo for future .exe packaging
+- [x] Keep QR codes off cash checkout, receipts, and cash payment settings
+- [x] Add screenshot-inspired cash tender/change, bank card checkout, and discount choices, retaining mobile money and offline operation

@@ -1,33 +1,29 @@
-# Kings Food POS
+# Welcome to your Lovable project
 
-Offline-first restaurant point-of-sale application for Kings Food.
+This project was built with [Lovable](https://lovable.dev).
 
-## Offline architecture
+## Build with Lovable
 
-The POS is designed to operate without an Internet connection after installation. Menu, categories, orders, sales history, settings, payment methods and local QR assets are stored on the device using IndexedDB. A service worker caches the application shell for offline startup.
+Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
+- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
-```bash
-npm install
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+
+```sh
+git clone <this-repository-url>
+cd <repository-name>
+npm i
 npm run dev
 ```
 
-Build for production:
+## Built with
 
-```bash
-npm run build
-npm run preview
-```
-
-## Branding
-
-This project contains no Lovable runtime, telemetry, cloud database, Supabase/Firebase dependency, external font loading, or external runtime API requirement.
-
-## Local data
-
-The local database is named `kings-food`. Clearing the browser/app site data removes the local POS database, so production deployments should provide an appropriate backup/export workflow before clearing device data.
-
-## Repository
-
-Kings Food POS — maintained for Kings Food restaurant operations.
+- TanStack Start
+- TypeScript
+- React
+- Tailwind CSS
