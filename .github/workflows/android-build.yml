@@ -43,14 +43,14 @@ jobs:
       - name: Build Android web assets and sync
         run: npm run android:sync
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload debug APK
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: kings-food-pos-android-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: kings-food-pos-android-release
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 14
