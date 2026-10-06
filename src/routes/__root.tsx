@@ -5,15 +5,13 @@ import {
   createRootRouteWithContext,
   useRouter,
   HeadContent,
-  Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 import { ChefHat, ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon } from "lucide-react";
 import textLogo from "@/assets/kf-text-logo.png.asset.json";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerServiceWorker } from "../lib/pwa";
 import { InstallButton } from "../components/InstallButton";
 import { Toaster } from "@/components/ui/sonner";
@@ -61,7 +59,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    console.error("Kings Food POS route error", error);
   }, [error]);
 
   return (
@@ -108,36 +106,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap",
-      },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/icons/icon-192.png" },
     ],
   }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
-
-function RootShell({ children }: { children: ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 const NAV = [
   { to: "/", label: "POS", icon: ClipboardList },
@@ -156,7 +133,9 @@ function RootComponent() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
+      <HeadContent />
+      <QueryClientProvider client={queryClient}>
       <div className="flex min-h-screen flex-col bg-background">
         <div className="flag-stripe no-print" />
         <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur no-print">
@@ -214,7 +193,8 @@ function RootComponent() {
           </ul>
         </nav>
       </div>
-      <Toaster position="top-center" />
-    </QueryClientProvider>
+        <Toaster position="top-center" />
+      </QueryClientProvider>
+    </>
   );
 }
