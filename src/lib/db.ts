@@ -166,9 +166,7 @@ function getDB() {
             spendings.createIndex("byCreatedAt", "createdAt");
           }
           const categories = transaction.objectStore("categories");
-          void categories.get("c-cakes").then((category) => {
-            if (!category) void categories.put({ id: "c-cakes", name: "Cakes", createdAt: Date.now() + 3 });
-          });
+          categories.put({ id: "c-cakes", name: "Cakes", createdAt: Date.now() + 3 });
         }
         if (oldVersion >= 1 && oldVersion < 5) {
           const categories = transaction.objectStore("categories");
@@ -242,7 +240,8 @@ async function seed(db: IDBPDatabase<KingsDB>) {
 export async function listCategories(): Promise<Category[]> {
   if (!hasIDB()) return [];
   const db = await getDB();
-  return (await db.getAll("categories")).sort((a, b) => a.createdAt - b.createdAt);
+  const order = new Map(["c-plats", "c-grillades", "c-boissons", "c-cakes"].map((id, i) => [id, i]));
+  return (await db.getAll("categories")).sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99) || a.createdAt - b.createdAt);
 }
 
 export async function saveCategory(c: Category) {
