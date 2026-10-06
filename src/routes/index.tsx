@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PayQR } from "@/components/PayQR";
 import { Receipt } from "@/components/Receipt";
+import { printReceiptAndArchive } from "@/lib/desktop";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -132,6 +133,23 @@ function PosPage() {
       toast.success("Order sent to the kitchen");
     },
   });
+
+  const printCurrentReceipt = async () => {
+    if (!receipt) return;
+    try {
+      const result = await printReceiptAndArchive(receipt, settings);
+      if (result.printed && result.archived) {
+        toast.success("Receipt printed and saved to Excel");
+      } else if (result.printed) {
+        toast.warning("Receipt printed, but Excel archiving failed");
+      } else if (result.fallback) {
+        toast.info(result.message || "Browser print dialog opened");
+      }
+    } catch (error) {
+      console.error("Receipt print/archive failed:", error);
+      toast.error("Could not complete the receipt print.");
+    }
+  };
 
   const canSubmit =
     cart.length > 0 && paymentReady && (mode === "table" ? table.trim().length > 0 : customer.trim().length > 0 && phone.trim().length > 0);
@@ -377,7 +395,7 @@ function PosPage() {
             <DialogTitle className="font-display">Receipt</DialogTitle>
           </DialogHeader>
           {receipt && <Receipt order={receipt} settings={settings} />}
-          <Button className="rounded-full no-print" onClick={() => window.print()}>
+          <Button className="rounded-full no-print" onClick={() => void printCurrentReceipt()}>
             <Printer className="size-4" /> Print receipt
           </Button>
         </DialogContent>
