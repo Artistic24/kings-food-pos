@@ -161,16 +161,33 @@ async function archivePrintedReceipt({ order, settings }) {
   formatMoney(receipts, ["subtotal", "discount", "tax", "delivery", "total", "tendered", "change"]);
   formatMoney(items, ["unitPrice", "lineTotal"]);
 
-  await workbook.xlsx.writeFile(tempPath);
-  await fs.promises.rm(filePath, { force: true });
-  await fs.promises.rename(tempPath, filePath);
+  try {
+    await workbook.xlsx.writeFile(tempPath);
+    await fs.promises.rm(filePath, { force: true });
+    await fs.promises.rename(tempPath, filePath);
 
-  return {
-    success: true,
-    alreadyArchived: false,
-    filePath,
-    relativePath: path.relative(require("electron").app.getPath("documents"), filePath),
-  };
+    return {
+      success: true,
+      alreadyArchived: false,
+      filePath,
+      relativePath: path.relative(require("electron").app.getPath("documents"), filePath),
+    };
+  } catch (error) {
+    await fs.promises.rm(tempPath, { force: true }).catch(() => {});
+
+    const fallbackPath = path.join(root, `Kings-Food-Receipt-${textValue(order.ref).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`);
+    await workbook.xlsx.writeFile(fallbackPath);
+
+    return {
+      success: true,
+      alreadyArchived: false,
+      fallback: true,
+      filePath: fallbackPath,
+      relativePath: path.relative(require("electron").app.getPath("documents"), fallbackPath),
+      warning: "The daily Excel workbook was locked, so this receipt was saved to its own Excel file instead.",
+      originalError: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 async function openReceiptsFolder() {
