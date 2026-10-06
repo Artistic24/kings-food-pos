@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "build:web": "vite build",
     "electron:dev": "npm run build:web && electron .",
-    "build:win": "npm run build:web && electron-builder --win nsis",
+    "build:win": "npm run build:web && electron-builder --win nsis --publish never",
     "android:add": "npx cap add android",
     "android:sync": "npm run build:web && npx cap sync android && node scripts/prepare-android.mjs",
     "build:android": "npm run build:web && npx cap sync android && node scripts/prepare-android.mjs && cd android && ./gradlew assembleDebug",
@@ -136,6 +136,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Kings Food POS"
-    }
+    },
+    "icon": "public/icons/icon-512.png"
   }
 }
