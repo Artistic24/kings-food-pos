@@ -129,7 +129,7 @@ export const hasIDB = () => typeof indexedDB !== "undefined";
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<KingsDB>("kings-food", 6, {
+    dbPromise = openDB<KingsDB>("kings-food", 7, {
       upgrade(db, oldVersion, _newVersion, transaction) {
         if (oldVersion < 2 && !db.objectStoreNames.contains("settings")) {
           db.createObjectStore("settings", { keyPath: "id" });
