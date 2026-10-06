@@ -2,148 +2,58 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Printer } from "lucide-react";
-
 import { DEFAULT_SETTINGS, getSettings, listOrders, type Order } from "@/lib/db";
 import { fcfa, dateOf, timeOf, isSameDay, STATUS_LABEL } from "@/lib/kings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Receipt } from "@/components/Receipt";
 
-export const Route = createFileRoute("/sales")({
-  head: () => ({
-    meta: [
-      { title: "Sales — Kings Food" },
-      { name: "description", content: "Sales history and daily report for Kings Food." },
-      { property: "og:title", content: "Sales — Kings Food" },
-      { property: "og:description", content: "Today's revenue, orders and best-selling dishes." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  component: SalesPage,
-});
+export const Route = createFileRoute("/sales")({ component: SalesPage, head: () => ({ meta: [{ title: "Sales — Kings Food" }] }) });
 
-function SalesPage() {
-  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: listOrders });
-  const { data: settings = DEFAULT_SETTINGS } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
-  const [open, setOpen] = useState<Order | null>(null);
+function startOfDay(d: Date){const x=new Date(d);x.setHours(0,0,0,0);return x}
+function startOfWeek(d: Date){const x=startOfDay(d);const day=x.getDay();x.setDate(x.getDate()-(day===0?6:day-1));return x}
+function keyDay(d: Date){return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`}
+function keyMonth(d: Date){return `${d.getFullYear()}-${d.getMonth()}`}
+function revenue(orders:Order[],from:number,to:number){return orders.filter(o=>o.createdAt>=from&&o.createdAt<to).reduce((s,o)=>s+o.total,0)}
 
-  const today = useMemo(() => orders.filter((o) => isSameDay(o.createdAt, Date.now())), [orders]);
-
-  const revenue = today.reduce((s, o) => s + o.total, 0);
-  const delivery = today.filter((o) => o.mode === "delivery").length;
-  const byMethod = today.reduce<Record<string, number>>((acc, o) => {
-    const name = settings.payments.find((p) => p.id === o.paymentMethod)?.name ?? "Other";
-    acc[name] = (acc[name] ?? 0) + o.total;
-    return acc;
-  }, {});
-  const avg = today.length ? Math.round(revenue / today.length) : 0;
-
-  const topDishes = useMemo(() => {
-    const map = new Map<string, { name: string; qty: number; amount: number }>();
-    today.forEach((o) =>
-      o.items.forEach((i) => {
-        const cur = map.get(i.name) ?? { name: i.name, qty: 0, amount: 0 };
-        map.set(i.name, { name: i.name, qty: cur.qty + i.qty, amount: cur.amount + i.qty * i.price });
-      }),
-    );
-    return [...map.values()].sort((a, b) => b.qty - a.qty).slice(0, 5);
-  }, [today]);
-
-  return (
-    <div className="space-y-5">
-      <h1 className="font-display text-xl font-bold">Daily report</h1>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Revenue" value={fcfa(revenue)} highlight />
-        <Stat label="Orders" value={String(today.length)} />
-        <Stat label="Deliveries" value={String(delivery)} />
-        <Stat label="Average order" value={fcfa(avg)} />
-      </div>
-
-      <section className="rounded-2xl bg-card p-4 shadow-soft">
-        <h2 className="font-display text-sm font-bold">Best sellers</h2>
-        {topDishes.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No sales yet today.</p>
-        ) : (
-          <ul className="mt-2 space-y-2">
-            {topDishes.map((d) => (
-              <li key={d.name} className="flex items-center justify-between text-sm">
-                <span className="font-medium">
-                  {d.name} <span className="text-muted-foreground">× {d.qty}</span>
-                </span>
-                <span className="font-semibold text-primary">{fcfa(d.amount)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="rounded-2xl bg-card p-4 shadow-soft">
-        <h2 className="font-display text-sm font-bold">Revenue by payment method</h2>
-        {Object.keys(byMethod).length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">Nothing yet.</p>
-        ) : (
-          <ul className="mt-2 space-y-2">
-            {Object.entries(byMethod).map(([name, amount]) => (
-              <li key={name} className="flex justify-between text-sm">
-                <span className="font-medium">{name}</span>
-                <span className="font-semibold text-primary">{fcfa(amount)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-display text-sm font-bold">History</h2>
-        {orders.length === 0 ? (
-          <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No orders recorded yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {orders.map((o) => (
-              <li key={o.id}>
-                <button
-                  onClick={() => setOpen(o)}
-                  className="flex w-full items-center justify-between rounded-2xl bg-card p-3 text-left shadow-soft"
-                >
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {o.mode === "table" ? `Table ${o.table}` : `Delivery · ${o.zone}`}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {o.ref} · {dateOf(o.createdAt)} {timeOf(o.createdAt)} · {STATUS_LABEL[o.status]}
-                    </p>
-                  </div>
-                  <span className="font-display font-bold text-primary">{fcfa(o.total)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent className="max-h-[88vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-display">Receipt</DialogTitle>
-          </DialogHeader>
-          {open && <Receipt order={open} settings={settings} />}
-          <Button className="rounded-full no-print" onClick={() => window.print()}>
-            <Printer className="size-4" /> Print
-          </Button>
-        </DialogContent>
-      </Dialog>
-      {open && <div className="receipt-print"><Receipt order={open} settings={settings} /></div>}
-    </div>
-  );
+function buildDaily(orders:Order[]){
+ const end=startOfDay(new Date()); return Array.from({length:7},(_,i)=>{const d=new Date(end);d.setDate(end.getDate()-6+i);const n=new Date(d);n.setDate(d.getDate()+1);return {label:d.toLocaleDateString("en-US",{weekday:"short"}),value:revenue(orders,d.getTime(),n.getTime())}});
+}
+function buildWeekly(orders:Order[]){
+ const end=startOfWeek(new Date()); return Array.from({length:8},(_,i)=>{const d=new Date(end);d.setDate(end.getDate()-7*(7-i));const n=new Date(d);n.setDate(d.getDate()+7);return {label:d.toLocaleDateString("en-US",{day:"2-digit",month:"short"}),value:revenue(orders,d.getTime(),n.getTime())}});
+}
+function buildMonthly(orders:Order[]){
+ const end=new Date();end.setDate(1);end.setHours(0,0,0,0); return Array.from({length:12},(_,i)=>{const d=new Date(end.getFullYear(),end.getMonth()-(11-i),1);const n=new Date(d.getFullYear(),d.getMonth()+1,1);return {label:d.toLocaleDateString("en-US",{month:"short"}),value:revenue(orders,d.getTime(),n.getTime())}});
+}
+function buildYearly(orders:Order[]){
+ const y=new Date().getFullYear(); return Array.from({length:5},(_,i)=>{const yr=y-4+i;return {label:String(yr),value:revenue(orders,new Date(yr,0,1).getTime(),new Date(yr+1,0,1).getTime())}});
 }
 
-function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className={`rounded-2xl p-4 shadow-soft ${highlight ? "bg-brand text-primary-foreground" : "bg-card"}`}>
-      <p className={`text-[11px] ${highlight ? "opacity-85" : "text-muted-foreground"}`}>{label}</p>
-      <p className="font-display text-lg font-extrabold">{value}</p>
-    </div>
-  );
+function SalesPage(){
+ const {data:orders=[]}=useQuery({queryKey:["orders"],queryFn:listOrders}),{data:settings=DEFAULT_SETTINGS}=useQuery({queryKey:["settings"],queryFn:getSettings});
+ const [open,setOpen]=useState<Order|null>(null);
+ const today=useMemo(()=>orders.filter(o=>isSameDay(o.createdAt,Date.now())),[orders]);
+ const revenueToday=today.reduce((s,o)=>s+o.total,0),delivery=today.filter(o=>o.mode==="delivery").length,avg=today.length?Math.round(revenueToday/today.length):0;
+ const byMethod=today.reduce<Record<string,number>>((a,o)=>{const n=settings.payments.find(p=>p.id===o.paymentMethod)?.name??"Other";a[n]=(a[n]??0)+o.total;return a}, {});
+ const topDishes=useMemo(()=>{const m=new Map<string,{name:string;qty:number;amount:number}>();today.forEach(o=>o.items.forEach(i=>{const x=m.get(i.name)??{name:i.name,qty:0,amount:0};m.set(i.name,{name:i.name,qty:x.qty+i.qty,amount:x.amount+i.qty*i.price})}));return [...m.values()].sort((a,b)=>b.qty-a.qty).slice(0,5)},[today]);
+ return <div className="space-y-5">
+  <div><p className="text-sm text-muted-foreground">Revenue analytics</p><h1 className="font-display text-2xl font-extrabold">Sales</h1></div>
+  <div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Stat label="Today's revenue" value={fcfa(revenueToday)} highlight/><Stat label="Orders" value={String(today.length)}/><Stat label="Deliveries" value={String(delivery)}/><Stat label="Average order" value={fcfa(avg)}/></div>
+  <div className="grid gap-4 xl:grid-cols-2">
+   <RevenueChart title="Daily revenue — last 7 days" data={buildDaily(orders)}/>
+   <RevenueChart title="Weekly revenue — last 8 weeks" data={buildWeekly(orders)}/>
+   <RevenueChart title="Monthly revenue — last 12 months" data={buildMonthly(orders)}/>
+   <RevenueChart title="Yearly revenue — last 5 years" data={buildYearly(orders)}/>
+  </div>
+  <section className="rounded-2xl bg-card p-4 shadow-soft"><h2 className="font-display text-sm font-bold">Best sellers today</h2>{topDishes.length?<ul className="mt-2 space-y-2">{topDishes.map(d=><li key={d.name} className="flex justify-between text-sm"><span>{d.name} <span className="text-muted-foreground">× {d.qty}</span></span><b className="text-primary">{fcfa(d.amount)}</b></li>)}</ul>:<p className="mt-2 text-sm text-muted-foreground">No sales yet today.</p>}</section>
+  <section className="rounded-2xl bg-card p-4 shadow-soft"><h2 className="font-display text-sm font-bold">Revenue by payment method today</h2>{Object.keys(byMethod).length?<ul className="mt-2 space-y-2">{Object.entries(byMethod).map(([n,a])=><li key={n} className="flex justify-between text-sm"><span>{n}</span><b className="text-primary">{fcfa(a)}</b></li>)}</ul>:<p className="mt-2 text-sm text-muted-foreground">Nothing yet.</p>}</section>
+  <section className="space-y-3"><h2 className="font-display text-sm font-bold">Sales history</h2>{orders.length?<ul className="space-y-2">{orders.map(o=><li key={o.id}><button onClick={()=>setOpen(o)} className="flex w-full items-center justify-between rounded-2xl bg-card p-3 text-left shadow-soft"><div><p className="text-sm font-semibold">{o.mode==="table"?`Table ${o.table}`:`Delivery · ${o.zone}`}</p><p className="text-[11px] text-muted-foreground">{o.ref} · {dateOf(o.createdAt)} {timeOf(o.createdAt)} · {STATUS_LABEL[o.status]}</p></div><span className="font-display font-bold text-primary">{fcfa(o.total)}</span></button></li>)}</ul>:<p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No orders recorded yet.</p>}</section>
+  <Dialog open={!!open} onOpenChange={v=>!v&&setOpen(null)}><DialogContent className="max-h-[88vh] overflow-y-auto"><DialogHeader><DialogTitle>Receipt</DialogTitle></DialogHeader>{open&&<Receipt order={open} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>window.print()}><Printer className="size-4"/> Print</Button></DialogContent></Dialog>{open&&<div className="receipt-print"><Receipt order={open} settings={settings}/></div>}
+ </div>
 }
+function RevenueChart({title,data}:{title:string;data:{label:string;value:number}[]}){
+ const max=Math.max(...data.map(x=>x.value),1),w=520,h=190,p=28;
+ const points=data.map((x,i)=>`${p+i*((w-2*p)/Math.max(1,data.length-1))},${h-p-(x.value/max)*(h-2*p)}`).join(" ");
+ return <section className="rounded-2xl bg-card p-4 shadow-soft"><div className="flex items-center justify-between"><h2 className="font-display text-sm font-bold">{title}</h2><span className="text-xs text-muted-foreground">{fcfa(data.reduce((s,x)=>s+x.value,0))}</span></div><div className="mt-3 overflow-x-auto"><svg viewBox={`0 0 ${w} ${h}`} className="h-48 min-w-[520px] w-full" role="img" aria-label={title}><line x1={p} y1={h-p} x2={w-p} y2={h-p} stroke="currentColor" opacity=".15"/><polyline fill="none" stroke="currentColor" strokeWidth="3" points={points}/>{data.map((x,i)=>{const cx=p+i*((w-2*p)/Math.max(1,data.length-1));const cy=h-p-(x.value/max)*(h-2*p);return <g key={x.label+i}><circle cx={cx} cy={cy} r="4" fill="currentColor"/><text x={cx} y={h-7} textAnchor="middle" fontSize="10" fill="currentColor" opacity=".65">{x.label}</text></g>})}</svg></div></section>
+}
+function Stat({label,value,highlight}:{label:string;value:string;highlight?:boolean}){return <div className={`rounded-2xl p-4 shadow-soft ${highlight?"bg-brand text-primary-foreground":"bg-card"}`}><p className={`text-[11px] ${highlight?"opacity-85":"text-muted-foreground"}`}>{label}</p><p className="font-display text-lg font-extrabold">{value}</p></div>}
