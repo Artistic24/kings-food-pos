@@ -14,7 +14,11 @@
     "test:watch": "vitest",
     "build:web": "vite build",
     "electron:dev": "npm run build:web && electron .",
-    "build:win": "npm run build:web && electron-builder --win nsis"
+    "build:win": "npm run build:web && electron-builder --win nsis",
+    "android:add": "npx cap add android",
+    "android:sync": "npm run build:web && npx cap sync android && node scripts/prepare-android.mjs",
+    "build:android": "npm run build:web && npx cap sync android && node scripts/prepare-android.mjs && cd android && ./gradlew assembleDebug",
+    "build:android:release": "npm run build:web && npx cap sync android && node scripts/prepare-android.mjs && cd android && ./gradlew assembleRelease"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -73,7 +77,9 @@
     "vaul": "^1.1.2",
     "vite-plugin-pwa": "^1.3.0",
     "vite-tsconfig-paths": "^6.0.2",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/android": "^8.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -96,7 +102,8 @@
     "vite": "8.1.5",
     "vitest": "^4.1.10",
     "electron": "^40.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "@capacitor/cli": "^8.0.0"
   },
   "version": "1.1.0",
   "description": "Kings Food offline restaurant POS",
