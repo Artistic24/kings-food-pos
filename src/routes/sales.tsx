@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Printer } from "lucide-react";
+import { toast } from "sonner";
 import { DEFAULT_SETTINGS, getSettings, listOrders, type Order } from "@/lib/db";
 import { fcfa, dateOf, timeOf, isSameDay, STATUS_LABEL } from "@/lib/kings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Receipt } from "@/components/Receipt";
+import { printReceiptAndArchive } from "@/lib/desktop";
 
 export const Route = createFileRoute("/sales")({ component: SalesPage, head: () => ({ meta: [{ title: "Sales — Kings Food" }] }) });
 
@@ -32,6 +34,18 @@ function buildYearly(orders:Order[]){
 function SalesPage(){
  const {data:orders=[]}=useQuery({queryKey:["orders"],queryFn:listOrders}),{data:settings=DEFAULT_SETTINGS}=useQuery({queryKey:["settings"],queryFn:getSettings});
  const [open,setOpen]=useState<Order|null>(null);
+ const printOpenReceipt = async () => {
+   if (!open) return;
+   try {
+     const result = await printReceiptAndArchive(open, settings);
+     if (result.printed && result.archived) toast.success("Receipt printed and saved to Excel");
+     else if (result.printed) toast.warning("Receipt printed, but Excel archiving failed");
+     else if (result.fallback) toast.info(result.message || "Browser print dialog opened");
+   } catch (error) {
+     console.error("Receipt print/archive failed:", error);
+     toast.error("Could not complete the receipt print.");
+   }
+ };
  const today=useMemo(()=>orders.filter(o=>isSameDay(o.createdAt,Date.now())),[orders]);
  const revenueToday=today.reduce((s,o)=>s+o.total,0),delivery=today.filter(o=>o.mode==="delivery").length,avg=today.length?Math.round(revenueToday/today.length):0;
  const byMethod=today.reduce<Record<string,number>>((a,o)=>{const n=settings.payments.find(p=>p.id===o.paymentMethod)?.name??"Other";a[n]=(a[n]??0)+o.total;return a}, {});
@@ -48,7 +62,7 @@ function SalesPage(){
   <section className="rounded-2xl bg-card p-4 shadow-soft"><h2 className="font-display text-sm font-bold">Best sellers today</h2>{topDishes.length?<ul className="mt-2 space-y-2">{topDishes.map(d=><li key={d.name} className="flex justify-between text-sm"><span>{d.name} <span className="text-muted-foreground">× {d.qty}</span></span><b className="text-primary">{fcfa(d.amount)}</b></li>)}</ul>:<p className="mt-2 text-sm text-muted-foreground">No sales yet today.</p>}</section>
   <section className="rounded-2xl bg-card p-4 shadow-soft"><h2 className="font-display text-sm font-bold">Revenue by payment method today</h2>{Object.keys(byMethod).length?<ul className="mt-2 space-y-2">{Object.entries(byMethod).map(([n,a])=><li key={n} className="flex justify-between text-sm"><span>{n}</span><b className="text-primary">{fcfa(a)}</b></li>)}</ul>:<p className="mt-2 text-sm text-muted-foreground">Nothing yet.</p>}</section>
   <section className="space-y-3"><h2 className="font-display text-sm font-bold">Sales history</h2>{orders.length?<ul className="space-y-2">{orders.map(o=><li key={o.id}><button onClick={()=>setOpen(o)} className="flex w-full items-center justify-between rounded-2xl bg-card p-3 text-left shadow-soft"><div><p className="text-sm font-semibold">{o.mode==="table"?`Table ${o.table}`:`Delivery · ${o.zone}`}</p><p className="text-[11px] text-muted-foreground">{o.ref} · {dateOf(o.createdAt)} {timeOf(o.createdAt)} · {STATUS_LABEL[o.status]}</p></div><span className="font-display font-bold text-primary">{fcfa(o.total)}</span></button></li>)}</ul>:<p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No orders recorded yet.</p>}</section>
-  <Dialog open={!!open} onOpenChange={v=>!v&&setOpen(null)}><DialogContent className="max-h-[88vh] overflow-y-auto"><DialogHeader><DialogTitle>Receipt</DialogTitle></DialogHeader>{open&&<Receipt order={open} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>window.print()}><Printer className="size-4"/> Print</Button></DialogContent></Dialog>{open&&<div className="receipt-print"><Receipt order={open} settings={settings}/></div>}
+  <Dialog open={!!open} onOpenChange={v=>!v&&setOpen(null)}><DialogContent className="max-h-[88vh] overflow-y-auto"><DialogHeader><DialogTitle>Receipt</DialogTitle></DialogHeader>{open&&<Receipt order={open} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>void printOpenReceipt()}><Printer className="size-4"/> Print</Button></DialogContent></Dialog>{open&&<div className="receipt-print"><Receipt order={open} settings={settings}/></div>}
  </div>
 }
 function RevenueChart({title,data}:{title:string;data:{label:string;value:number}[]}){
