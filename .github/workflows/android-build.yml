@@ -2,8 +2,7 @@ name: Kings Food POS Android Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -126,6 +125,9 @@ jobs:
           ASSET="Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ASSET"
+          elif gh release create "$TAG" "$ASSET" --title "$TITLE" --generate-notes; then
+            echo "Created release $TAG with the Android APK."
           else
-            gh release create "$TAG" "$ASSET" --title "$TITLE" --generate-notes
+            echo "Release $TAG appeared during publication; uploading the APK now."
+            gh release upload "$TAG" "$ASSET"
           fi
