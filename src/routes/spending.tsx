@@ -5,6 +5,7 @@ import { Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_SETTINGS, getSettings, listSpendings, saveSpending, deleteSpending, uid, type Spending } from "@/lib/db";
 import { dateOf, fcfa, makeRef, timeOf } from "@/lib/kings";
+import { printSpendingAndArchive } from "@/lib/desktop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,17 @@ function SpendingPage(){
  const [description,setDescription]=useState(""),[category,setCategory]=useState(CATEGORIES[0]),[amount,setAmount]=useState(""),[vendor,setVendor]=useState(""),[paymentMethod,setPaymentMethod]=useState("cash"),[notes,setNotes]=useState(""),[receipt,setReceipt]=useState<Spending|null>(null);
  const now=Date.now(), daily=useMemo(()=>spendings.filter(s=>day(s.createdAt,now)),[spendings,now]), monthly=useMemo(()=>spendings.filter(s=>month(s.createdAt,now)),[spendings,now]), yearly=useMemo(()=>spendings.filter(s=>year(s.createdAt,now)),[spendings,now]);
  const sum=(xs:Spending[])=>xs.reduce((a,s)=>a+s.amount,0);
+ const printSpendingReceipt = async (item: Spending) => {
+   try {
+     const result = await printSpendingAndArchive(item, settings);
+     if (result.printed && result.archived) toast.success(result.message || "Spending receipt printed and saved to Excel");
+     else if (result.printed) toast.warning(result.message || "Printed, but Excel archiving failed");
+     else toast.info(result.message || "Printing was cancelled");
+   } catch (error) {
+     console.error("Spending print/archive failed:", error);
+     toast.error("Could not complete the spending receipt print.");
+   }
+ };
  const create=useMutation({mutationFn:async()=>{const n=Number(amount);if(!description.trim()||!Number.isFinite(n)||n<=0)throw new Error("Enter a description and valid amount.");const s:Spending={id:uid(),ref:makeRef(),description:description.trim(),category,amount:Math.round(n),vendor:vendor.trim()||undefined,paymentMethod,notes:notes.trim()||undefined,createdAt:Date.now()};await saveSpending(s);return s},onSuccess:s=>{qc.invalidateQueries({queryKey:["spendings"]});setDescription("");setAmount("");setVendor("");setNotes("");setReceipt(s);toast.success("Spending recorded")},onError:e=>toast.error(e instanceof Error?e.message:"Could not save spending")});
  return <div className="space-y-5">
   <div><p className="text-sm text-muted-foreground">Restaurant expenses</p><h1 className="font-display text-2xl font-extrabold">Spending</h1></div>
@@ -35,7 +47,7 @@ function SpendingPage(){
   </div><Button className="mt-4 rounded-full" disabled={create.isPending} onClick={()=>create.mutate()}>Record spending & print receipt</Button></section>
   <div className="grid gap-3 md:grid-cols-3"><Summary title="Today" amount={sum(daily)}/><Summary title="This month" amount={sum(monthly)}/><Summary title="This year" amount={sum(yearly)}/></div>
   <section className="space-y-3"><h2 className="font-display text-lg font-bold">Spending history</h2>{spendings.length===0?<p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No spendings recorded yet.</p>:<ul className="space-y-2">{spendings.map(s=><li key={s.id} className="flex items-center gap-2 rounded-2xl bg-card p-3 shadow-soft"><button className="min-w-0 flex-1 text-left" onClick={()=>setReceipt(s)}><p className="truncate text-sm font-semibold">{s.description}</p><p className="text-[11px] text-muted-foreground">{s.ref} · {s.category} · {dateOf(s.createdAt)} {timeOf(s.createdAt)}</p></button><span className="font-display font-bold text-destructive">−{fcfa(s.amount)}</span><Button size="icon" variant="ghost" className="size-8" onClick={async()=>{if(confirm("Delete spending "+s.ref+"?")){await deleteSpending(s.id);qc.invalidateQueries({queryKey:["spendings"]})}}}><Trash2 className="size-4 text-destructive"/></Button></li>)}</ul>}</section>
-  <Dialog open={!!receipt} onOpenChange={v=>!v&&setReceipt(null)}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Spending receipt</DialogTitle></DialogHeader>{receipt&&<SpendingReceipt spending={receipt} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>window.print()}><Printer className="size-4"/> Print receipt</Button></DialogContent></Dialog>
+  <Dialog open={!!receipt} onOpenChange={v=>!v&&setReceipt(null)}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Spending receipt</DialogTitle></DialogHeader>{receipt&&<SpendingReceipt spending={receipt} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>receipt&&void printSpendingReceipt(receipt)}><Printer className="size-4"/> Print receipt</Button></DialogContent></Dialog>
   {receipt&&<div className="receipt-print"><SpendingReceipt spending={receipt} settings={settings}/></div>}
  </div>
 }
