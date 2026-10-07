@@ -129,8 +129,3 @@ jobs:
           else
             gh release create "$TAG" "$ASSET" --title "$TITLE" --generate-notes
           fi
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ASSET"
-          else
-            gh release create "$TAG" "$ASSET" --title "$TITLE" --generate-notes
-          fi
