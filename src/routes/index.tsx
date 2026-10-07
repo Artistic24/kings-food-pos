@@ -42,6 +42,7 @@ function PosPage() {
   const [table, setTable] = useState("");
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
+  const [reference, setReference] = useState("");
   const [zone, setZone] = useState("");
   const [pay, setPay] = useState("");
   const [tendered, setTendered] = useState("");
@@ -98,6 +99,7 @@ function PosPage() {
       const order: Order = {
         id: uid(),
         ref: makeRef(),
+        reference: reference.trim() || undefined,
         mode,
         table: mode === "table" ? table.trim() : undefined,
         customer: mode === "delivery" ? customer.trim() : undefined,
@@ -126,6 +128,7 @@ function PosPage() {
       setTable("");
       setCustomer("");
       setPhone("");
+      setReference("");
       setTendered("");
       setCardApproved(false);
       setDiscountPercent(0);
