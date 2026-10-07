@@ -106,7 +106,7 @@
     "electron-builder": "^26.0.12",
     "@capacitor/cli": "^8.0.0"
   },
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Kings Food offline restaurant POS with spending management and revenue analytics",
   "main": "electron/main.cjs",
   "build": {
