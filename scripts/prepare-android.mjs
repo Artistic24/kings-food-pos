@@ -51,6 +51,204 @@ if (fs.existsSync(iconSource)) {
   throw new Error("Kings Food icon source is missing: public/icons/icon-512.png");
 }
 
+const pluginPath = path.join(
+  androidRoot,
+  "app/src/main/java/com/kingsfood/pos/KingsFoodPrinterPlugin.java",
+);
+const pluginJava = `package com.kingsfood.pos;
+
+import android.app.Activity;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.MediaStore;
+import android.print.PrintAttributes;
+import android.print.PrintJob;
+import android.print.PrintManager;
+import android.provider.Settings;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.util.Base64;
+
+@CapacitorPlugin(name = "KingsFoodPrinter")
+public class KingsFoodPrinterPlugin extends Plugin {
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    @PluginMethod
+    public void getStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("platform", "android");
+        ret.put("printSystemAvailable", getContext().getSystemService(Context.PRINT_SERVICE) != null);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openPrintSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_PRINT_SETTINGS);
+            getActivity().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Unable to open Android print settings", e);
+        }
+    }
+
+    @PluginMethod
+    public void printCurrentPage(PluginCall call) {
+        final Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("Android activity is unavailable");
+            return;
+        }
+
+        activity.runOnUiThread(() -> {
+            try {
+                PrintManager printManager = (PrintManager) activity.getSystemService(Context.PRINT_SERVICE);
+                if (printManager == null) {
+                    call.reject("Android printing is not available on this device");
+                    return;
+                }
+
+                PrintAttributes attributes = new PrintAttributes.Builder()
+                    .setMediaSize(PrintAttributes.MediaSize.UNKNOWN_PORTRAIT)
+                    .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                    .build();
+
+                PrintJob job = printManager.print(
+                    call.getString("jobName", "Kings Food POS Receipt"),
+                    getBridge().getWebView().createPrintDocumentAdapter("Kings Food POS"),
+                    attributes
+                );
+
+                if (job == null) {
+                    call.reject("Android could not create the print job");
+                    return;
+                }
+
+                waitForPrintJob(call, job, System.currentTimeMillis());
+            } catch (Exception e) {
+                call.reject("Could not open Android print preview", e);
+            }
+        });
+    }
+
+    private void waitForPrintJob(PluginCall call, PrintJob job, long startedAt) {
+        if (job.isCompleted()) {
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            ret.put("status", "completed");
+            call.resolve(ret);
+            return;
+        }
+        if (job.isFailed()) {
+            JSObject ret = new JSObject();
+            ret.put("success", false);
+            ret.put("status", "failed");
+            ret.put("failureReason", "Android reported that the print job failed.");
+            call.resolve(ret);
+            return;
+        }
+        if (job.isCancelled()) {
+            JSObject ret = new JSObject();
+            ret.put("success", false);
+            ret.put("status", "cancelled");
+            ret.put("failureReason", "Printing was cancelled.");
+            call.resolve(ret);
+            return;
+        }
+
+        if (System.currentTimeMillis() - startedAt > 10 * 60 * 1000L) {
+            JSObject ret = new JSObject();
+            ret.put("success", false);
+            ret.put("status", "timeout");
+            ret.put("failureReason", "Android print job timed out.");
+            call.resolve(ret);
+            return;
+        }
+
+        handler.postDelayed(() -> waitForPrintJob(call, job, startedAt), 500);
+    }
+
+    @PluginMethod
+    public void saveExcel(PluginCall call) {
+        String base64 = call.getString("base64");
+        String fileName = call.getString("fileName");
+        String year = call.getString("year");
+        String month = call.getString("month");
+
+        if (base64 == null || fileName == null || year == null || month == null) {
+            call.reject("Missing Excel file data");
+            return;
+        }
+
+        try {
+            byte[] data = Base64.getDecoder().decode(base64);
+            String relative = "Download/Kings Food POS/Receipts/" + year + "/" + month + "/";
+            String savedPath;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                values.put(MediaStore.Downloads.MIME_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                values.put(MediaStore.Downloads.RELATIVE_PATH, relative);
+                values.put(MediaStore.Downloads.IS_PENDING, 1);
+
+                Uri uri = getContext().getContentResolver().insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    values
+                );
+                if (uri == null) throw new Exception("Android could not create the Excel file");
+
+                try (OutputStream out = getContext().getContentResolver().openOutputStream(uri)) {
+                    if (out == null) throw new Exception("Android could not open the Excel file");
+                    out.write(data);
+                    out.flush();
+                }
+
+                values.clear();
+                values.put(MediaStore.Downloads.IS_PENDING, 0);
+                getContext().getContentResolver().update(uri, values, null, null);
+                savedPath = uri.toString();
+            } else {
+                File root = new File(
+                    getContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                    "Kings Food POS/Receipts/" + year + "/" + month
+                );
+                if (!root.exists() && !root.mkdirs()) throw new Exception("Could not create receipt directory");
+                File file = new File(root, fileName);
+                try (FileOutputStream out = new FileOutputStream(file)) {
+                    out.write(data);
+                    out.flush();
+                }
+                savedPath = file.getAbsolutePath();
+            }
+
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            ret.put("path", savedPath);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Could not save Excel receipt", e);
+        }
+    }
+}
+`;
+
+fs.writeFileSync(pluginPath, pluginJava);
+
 const java = `package com.kingsfood.pos;
 
 import android.Manifest;
@@ -59,6 +257,7 @@ import android.os.Build;
 import android.os.Bundle;
 import androidx.core.app.ActivityCompat;
 import com.getcapacitor.BridgeActivity;
+import com.kingsfood.pos.KingsFoodPrinterPlugin;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -67,6 +266,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(KingsFoodPrinterPlugin.class);
         super.onCreate(savedInstanceState);
         requestKingsFoodPermissions();
     }
