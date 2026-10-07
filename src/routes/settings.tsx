@@ -71,7 +71,9 @@ function SettingsPage() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-display font-bold">Receipt printer</h2>
-            <p className="text-xs text-muted-foreground">The Windows app prints receipts directly to this printer. Leave it on Windows default when using one main POS printer.</p>
+            <p className="text-xs text-muted-foreground">
+              Printers installed or connected to this computer are detected automatically. Select the printer you want Kings Food POS to use, then save settings.
+            </p>
           </div>
           <button
             type="button"
@@ -84,6 +86,11 @@ function SettingsPage() {
           </button>
         </div>
         {printers.length ? (
+          <>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{printers.length} printer{printers.length === 1 ? "" : "s"} detected</span>
+            {printers.find((p) => p.isDefault) && <span>Windows default: {printers.find((p) => p.isDefault)?.displayName}</span>}
+          </div>
           <select
             value={s.printerName ?? ""}
             onChange={(e) => setS({ ...s, printerName: e.target.value })}
@@ -96,9 +103,10 @@ function SettingsPage() {
               </option>
             ))}
           </select>
+          </>
         ) : (
           <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
-            No printer list is available in the browser/PWA. The installed Windows app will use the Windows default printer unless you select one here.
+            No Windows printer was detected. Make sure the printer is installed in Windows and turned on, then click Refresh. The Windows default printer will be used when no specific printer is selected.
           </div>
         )}
         <button
