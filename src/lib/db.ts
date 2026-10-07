@@ -30,6 +30,7 @@ export type OrderStatus = "new" | "preparing" | "ready" | "served";
 export type Order = {
   id: string;
   ref: string;
+  reference?: string;
   mode: "table" | "delivery";
   table?: string | undefined;
   customer?: string | undefined;
@@ -64,6 +65,7 @@ export type Zone = { name: string; fee: number };
 export type Spending = {
   id: string;
   ref: string;
+  reference?: string;
   description: string;
   category: string;
   amount: number;
