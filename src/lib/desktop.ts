@@ -72,6 +72,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
   if (kind === "sale") {
     sheet.columns = [
       { header: "Receipt Ref", key: "ref", width: 22 },
+      { header: "Reference", key: "reference", width: 32 },
       { header: "Date", key: "date", width: 20 },
       { header: "Item", key: "item", width: 32 },
       { header: "Qty", key: "qty", width: 10 },
@@ -89,6 +90,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
     data.items?.forEach((item: any, index: number) => {
       sheet.addRow({
         ref: index === 0 ? ref : "",
+        reference: index === 0 ? (data.reference || "") : "",
         date: index === 0 ? date : "",
         item: item.name,
         qty: item.qty,
@@ -107,6 +109,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
   } else {
     sheet.columns = [
       { header: "Spending Ref", key: "ref", width: 22 },
+      { header: "Reference", key: "reference", width: 32 },
       { header: "Date", key: "date", width: 20 },
       { header: "Description", key: "description", width: 32 },
       { header: "Category", key: "category", width: 20 },
@@ -117,6 +120,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
     ];
     sheet.addRow({
       ref,
+      reference: data.reference || "",
       date,
       description: data.description,
       category: data.category,
@@ -171,22 +175,6 @@ export async function printReceiptAndArchive(
     };
   }
 
-  if (isAndroidApp()) {
-    const printed = await AndroidPrinter.printCurrentPage({ jobName: "Kings Food Spending Receipt" });
-    if (!printed.success) {
-      return { printed: false, archived: false, fallback: false, message: printed.failureReason || "Android printing was cancelled or failed." };
-    }
-    const archived = await createAndroidExcelReceipt("spending", spending);
-    return {
-      printed: true,
-      archived: archived.success,
-      fallback: false,
-      message: archived.success
-        ? "Printed successfully and saved to Excel: " + archived.relativePath
-        : "Printed successfully, but the Excel spending archive could not be saved.",
-    };
-  }
-
   const desktop = window.kingsFoodDesktop;
 
   if (!desktop) {
@@ -227,6 +215,22 @@ export async function printSpendingAndArchive(
   spending: unknown,
   settings: { printerName?: string },
 ): Promise<{ printed: boolean; archived: boolean; fallback: boolean; message?: string }> {
+  if (isAndroidApp()) {
+    const printed = await AndroidPrinter.printCurrentPage({ jobName: "Kings Food Spending Receipt" });
+    if (!printed.success) {
+      return { printed: false, archived: false, fallback: false, message: printed.failureReason || "Android printing was cancelled or failed." };
+    }
+    const archived = await createAndroidExcelReceipt("spending", spending);
+    return {
+      printed: true,
+      archived: archived.success,
+      fallback: false,
+      message: archived.success
+        ? "Printed successfully and saved to Excel: " + archived.relativePath
+        : "Printed successfully, but the Excel spending archive could not be saved.",
+    };
+  }
+
   const desktop = window.kingsFoodDesktop;
 
   if (!desktop) {
