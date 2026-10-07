@@ -12,8 +12,9 @@ export function Receipt({ order, settings }: { order: Order; settings: Settings 
         <p className="font-display text-lg font-extrabold uppercase">{settings.businessName}</p>
         <p className="text-xs text-muted-foreground">{settings.address}{settings.phone && ` · ${settings.phone}`}</p>
         <p className="text-xs text-muted-foreground">
-          {order.ref} · {dateOf(order.createdAt)} {timeOf(order.createdAt)}
+          Receipt code: {order.ref} · {dateOf(order.createdAt)} {timeOf(order.createdAt)}
         </p>
+        {order.reference && <p className="mt-1 text-xs font-semibold">Reference: {order.reference}</p>}
       </div>
       <p className="text-xs">
         {order.mode === "table"
