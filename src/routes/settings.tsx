@@ -148,8 +148,8 @@ function SettingsPage() {
                 <p className="text-xs text-muted-foreground">
                   Every successful printed receipt is archived automatically into a daily Excel workbook in your Windows Documents/Kings Food POS/Receipts folder.
                 </p>
-        
-      )}      </section>
+      </section>
+      )}
 
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
         <h2 className="font-display font-bold">Language</h2>
