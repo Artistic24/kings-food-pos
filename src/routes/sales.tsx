@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Printer } from "lucide-react";
+import { Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_SETTINGS, getSettings, listOrders, type Order } from "@/lib/db";
 import { fcfa, dateOf, timeOf, isSameDay, STATUS_LABEL } from "@/lib/kings";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Receipt } from "@/components/Receipt";
 import { printReceiptAndArchive } from "@/lib/desktop";
@@ -34,6 +35,12 @@ function buildYearly(orders:Order[]){
 function SalesPage(){
  const {data:orders=[]}=useQuery({queryKey:["orders"],queryFn:listOrders}),{data:settings=DEFAULT_SETTINGS}=useQuery({queryKey:["settings"],queryFn:getSettings});
  const [open,setOpen]=useState<Order|null>(null);
+ const [search,setSearch]=useState("");
+ const filteredOrders=useMemo(()=>{
+   const q=search.trim().toLowerCase();
+   if(!q) return orders;
+   return orders.filter(o=>[o.ref,o.reference,o.customer,o.phone,o.table,o.zone].some(v=>String(v??"").toLowerCase().includes(q)));
+ },[orders,search]);
  const printOpenReceipt = async () => {
    if (!open) return;
    try {
@@ -61,7 +68,7 @@ function SalesPage(){
   </div>
   <section className="rounded-2xl bg-card p-4 shadow-soft"><h2 className="font-display text-sm font-bold">Best sellers today</h2>{topDishes.length?<ul className="mt-2 space-y-2">{topDishes.map(d=><li key={d.name} className="flex justify-between text-sm"><span>{d.name} <span className="text-muted-foreground">× {d.qty}</span></span><b className="text-primary">{fcfa(d.amount)}</b></li>)}</ul>:<p className="mt-2 text-sm text-muted-foreground">No sales yet today.</p>}</section>
   <section className="rounded-2xl bg-card p-4 shadow-soft"><h2 className="font-display text-sm font-bold">Revenue by payment method today</h2>{Object.keys(byMethod).length?<ul className="mt-2 space-y-2">{Object.entries(byMethod).map(([n,a])=><li key={n} className="flex justify-between text-sm"><span>{n}</span><b className="text-primary">{fcfa(a)}</b></li>)}</ul>:<p className="mt-2 text-sm text-muted-foreground">Nothing yet.</p>}</section>
-  <section className="space-y-3"><h2 className="font-display text-sm font-bold">Sales history</h2>{orders.length?<ul className="space-y-2">{orders.map(o=><li key={o.id}><button onClick={()=>setOpen(o)} className="flex w-full items-center justify-between rounded-2xl bg-card p-3 text-left shadow-soft"><div><p className="text-sm font-semibold">{o.mode==="table"?`Table ${o.table}`:`Delivery · ${o.zone}`}</p><p className="text-[11px] text-muted-foreground">{o.ref} · {dateOf(o.createdAt)} {timeOf(o.createdAt)} · {STATUS_LABEL[o.status]}</p></div><span className="font-display font-bold text-primary">{fcfa(o.total)}</span></button></li>)}</ul>:<p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No orders recorded yet.</p>}</section>
+  <section className="space-y-3"><div className="flex items-center justify-between gap-3"><h2 className="font-display text-sm font-bold">Sales history</h2><span className="text-xs text-muted-foreground">{filteredOrders.length} result{filteredOrders.length===1?"":"s"}</span></div><div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"/><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by reference or receipt code" className="rounded-full pl-9"/></div>{orders.length?<ul className="space-y-2">{filteredOrders.length?filteredOrders.map(o=><li key={o.id}><button onClick={()=>setOpen(o)} className="flex w-full items-center justify-between rounded-2xl bg-card p-3 text-left shadow-soft"><div><p className="text-sm font-semibold">{o.mode==="table"?`Table ${o.table}`:`Delivery · ${o.zone}`}</p><p className="text-[11px] text-muted-foreground">Receipt: {o.ref} · {dateOf(o.createdAt)} {timeOf(o.createdAt)} · {STATUS_LABEL[o.status]}</p>{o.reference&&<p className="text-[11px] text-muted-foreground">Reference: {o.reference}</p>}</div><span className="font-display font-bold text-primary">{fcfa(o.total)}</span></button></li>)}</ul>:<p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">{orders.length?"No matching receipts found.":"No orders recorded yet."}</p>}</section>
   <Dialog open={!!open} onOpenChange={v=>!v&&setOpen(null)}><DialogContent className="max-h-[88vh] overflow-y-auto"><DialogHeader><DialogTitle>Receipt</DialogTitle></DialogHeader>{open&&<Receipt order={open} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>void printOpenReceipt()}><Printer className="size-4"/> Print</Button></DialogContent></Dialog>{open&&<div className="receipt-print"><Receipt order={open} settings={settings}/></div>}
  </div>
 }
