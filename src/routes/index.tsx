@@ -228,6 +228,18 @@ function PosPage() {
       )}
 
       <div className="space-y-1.5">
+        <Label htmlFor="reference">Reference / important note</Label>
+        <Input
+          id="reference"
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+          placeholder="Optional: order note, customer request, etc."
+          maxLength={120}
+        />
+        <p className="text-[11px] text-muted-foreground">Saved with this receipt and printed on the POS receipt.</p>
+      </div>
+
+      <div className="space-y-1.5">
         <Label>Payment method</Label>
         <div className="flex flex-wrap gap-2">
           {methods.map((m) => (
