@@ -163,6 +163,36 @@ function SettingsPage() {
 
       <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-soft md:grid-cols-2">
         <h2 className="font-display font-bold md:col-span-2">Business</h2>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Receipt logo / profile image</Label>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex size-20 items-center justify-center rounded-xl border border-dashed border-border bg-muted/40 p-2">
+              <img src={s.receiptLogo || "/icons/kf-mark.png"} alt="Receipt logo preview" className="max-h-full max-w-full object-contain" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  try {
+                    const logo = await fileToDataUrl(f, 600);
+                    setS({ ...s, receiptLogo: logo });
+                  } catch {
+                    toast.error("Could not load that image.");
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Upload the logo or profile image you want printed at the top of POS and Spending receipts.</p>
+            </div>
+            {s.receiptLogo && (
+              <Button type="button" variant="outline" className="rounded-full" onClick={() => setS({ ...s, receiptLogo: "" })}>
+                Remove
+              </Button>
+            )}
+          </div>
+        </div>
         {field("Business name", "businessName")}
         {field("Tagline", "tagline")}
         {field("Address", "address")}
