@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
-const { archivePrintedReceipt, openReceiptsFolder } = require("./receipts.cjs");
+const { archivePrintedReceipt, archivePrintedSpending, openReceiptsFolder } = require("./receipts.cjs");
 
 const PORT = 0;
 const DIST_DIR = path.join(__dirname, "..", "dist");
@@ -102,6 +102,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle("kings-food:archive-receipt", async (_event, payload) => {
     return await archivePrintedReceipt(payload);
+  });
+
+  ipcMain.handle("kings-food:archive-spending", async (_event, payload) => {
+    return await archivePrintedSpending(payload);
   });
 
   ipcMain.handle("kings-food:open-receipts-folder", async () => openReceiptsFolder());
