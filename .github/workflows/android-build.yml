@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build-android-release:
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'feat: android-printing-release') || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -97,6 +98,9 @@ jobs:
             --ks-key-alias kings-food-pos \
             --out "Kings-Food-POS-${{ steps.version.outputs.version }}.apk" \
             "$ZIPALIGNED"
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            cp "Kings-Food-POS-${{ steps.version.outputs.version }}.apk" "Kings-Food-POS-${{ steps.version.outputs.version }}-Android-Printing.apk"
+          fi
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose \
             "Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
 
@@ -113,14 +117,19 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create GitHub Release
+      - name: Publish APK without replacing existing release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.version.outputs.version }}"
           TITLE="Kings Food POS ${{ steps.version.outputs.version }}"
+          ASSET="Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAG="v1.2.0"
+            ASSET="Kings-Food-POS-${{ steps.version.outputs.version }}-Android-Printing.apk"
+          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "Kings-Food-POS-${{ steps.version.outputs.version }}.apk" --clobber
+            gh release upload "$TAG" "$ASSET"
           else
-            gh release create "$TAG" "Kings-Food-POS-${{ steps.version.outputs.version }}.apk" --title "$TITLE" --generate-notes
+            gh release create "$TAG" "$ASSET" --title "$TITLE" --generate-notes
           fi
