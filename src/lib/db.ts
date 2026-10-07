@@ -85,6 +85,7 @@ export type Settings = {
   zones: Zone[];
   payments: PaymentMethod[];
   printerName?: string;
+  receiptLogo?: string;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -109,6 +110,7 @@ export const DEFAULT_SETTINGS: Settings = {
     { name: "Ngoa-Ekelle", fee: 1000 },
   ],
   printerName: "",
+  receiptLogo: "",
   payments: [
     { id: "cash", name: "Cash", account: "", holder: "", instructions: "Pay at the counter.", enabled: true },
     { id: "card", name: "Bank card", account: "", holder: "", instructions: "Charge with your card terminal, then confirm here.", enabled: true },
