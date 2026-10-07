@@ -198,4 +198,84 @@ async function openReceiptsFolder() {
   return { success: true, path: root };
 }
 
-module.exports = { archivePrintedReceipt, openReceiptsFolder };
+
+
+async function archivePrintedSpending({ spending, settings }) {
+  if (!spending || !spending.ref) throw new Error("Invalid spending receipt data.");
+
+  const { date, yyyy, mm, dd } = dateParts(spending.createdAt);
+  const root = path.join(require("electron").app.getPath("documents"), "Kings Food POS", "Receipts", yyyy, mm);
+  await fs.promises.mkdir(root, { recursive: true });
+
+  const filePath = path.join(root, `Kings-Food-Spending-${yyyy}-${mm}-${dd}.xlsx`);
+  const tempPath = filePath + ".tmp";
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Kings Food POS";
+  workbook.created = new Date();
+  workbook.modified = new Date();
+  workbook.properties.title = `Kings Food spending — ${yyyy}-${mm}-${dd}`;
+
+  if (fs.existsSync(filePath)) await workbook.xlsx.readFile(filePath);
+
+  const sheet = workbook.getWorksheet("Spending") || workbook.addWorksheet("Spending");
+  if (sheet.rowCount === 0) {
+    sheet.columns = [
+      { header: "Spending Ref", key: "ref", width: 20 },
+      { header: "Created At", key: "createdAt", width: 21 },
+      { header: "Description", key: "description", width: 32 },
+      { header: "Category", key: "category", width: 18 },
+      { header: "Supplier / Recipient", key: "vendor", width: 26 },
+      { header: "Payment", key: "payment", width: 22 },
+      { header: "Amount", key: "amount", width: 16 },
+      { header: "Notes", key: "notes", width: 40 },
+      { header: "Printed At", key: "printedAt", width: 21 },
+    ];
+    styleHeader(sheet.getRow(1));
+    configureSheet(sheet);
+  }
+
+  const alreadyArchived = sheet.getColumn(1).values.some((value) => String(value || "") === String(spending.ref));
+  if (alreadyArchived) {
+    return { success: true, alreadyArchived: true, filePath, relativePath: path.relative(require("electron").app.getPath("documents"), filePath) };
+  }
+
+  const method = Array.isArray(settings?.payments)
+    ? settings.payments.find((payment) => payment.id === spending.paymentMethod)
+    : undefined;
+
+  const row = sheet.addRow({
+    ref: textValue(spending.ref),
+    createdAt: date,
+    description: textValue(spending.description),
+    category: textValue(spending.category),
+    vendor: textValue(spending.vendor),
+    payment: textValue(method?.name || spending.paymentMethod || ""),
+    amount: Number(spending.amount || 0),
+    notes: textValue(spending.notes),
+    printedAt: new Date(),
+  });
+  row.getCell("createdAt").numFmt = "dd/mm/yyyy hh:mm";
+  row.getCell("printedAt").numFmt = "dd/mm/yyyy hh:mm";
+  sheet.getColumn("amount").numFmt = "#,##0";
+
+  try {
+    await workbook.xlsx.writeFile(tempPath);
+    await fs.promises.rm(filePath, { force: true });
+    await fs.promises.rename(tempPath, filePath);
+    return { success: true, alreadyArchived: false, filePath, relativePath: path.relative(require("electron").app.getPath("documents"), filePath) };
+  } catch (error) {
+    await fs.promises.rm(tempPath, { force: true }).catch(() => {});
+    const fallbackPath = path.join(root, `Kings-Food-Spending-${textValue(spending.ref).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`);
+    await workbook.xlsx.writeFile(fallbackPath);
+    return {
+      success: true,
+      alreadyArchived: false,
+      fallback: true,
+      filePath: fallbackPath,
+      relativePath: path.relative(require("electron").app.getPath("documents"), fallbackPath),
+      warning: "The daily spending workbook was locked, so this spending receipt was saved to its own Excel file instead.",
+    };
+  }
+}
+
+module.exports = { archivePrintedReceipt, archivePrintedSpending, openReceiptsFolder };
