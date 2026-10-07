@@ -34,6 +34,7 @@ function createReceiptsSheet(workbook) {
   const sheet = workbook.addWorksheet("Receipts");
   sheet.columns = [
     { header: "Receipt Ref", key: "ref", width: 20 },
+    { header: "Reference", key: "reference", width: 32 },
     { header: "Created At", key: "createdAt", width: 21 },
     { header: "Mode", key: "mode", width: 13 },
     { header: "Table", key: "table", width: 10 },
@@ -103,6 +104,7 @@ async function archivePrintedReceipt({ order, settings }) {
 
   const receipts = workbook.getWorksheet("Receipts") || createReceiptsSheet(workbook);
   const items = workbook.getWorksheet("Items") || createItemsSheet(workbook);
+  ensureReferenceColumn(receipts, "Reference", "reference", 32);
 
   const alreadyArchived = receipts.getColumn(1).values.some((value) => String(value || "") === order.ref);
   if (alreadyArchived) {
@@ -125,6 +127,7 @@ async function archivePrintedReceipt({ order, settings }) {
 
   const row = receipts.addRow({
     ref: textValue(order.ref),
+    reference: textValue(order.reference),
     createdAt: date,
     mode: order.mode === "table" ? "Dine-in" : "Delivery",
     table: textValue(order.table),
@@ -200,6 +203,15 @@ async function openReceiptsFolder() {
 
 
 
+function ensureReferenceColumn(sheet, header, key, width) {
+  if (sheet.columns.some((column) => column.key === key)) return;
+  const column = sheet.getColumn(sheet.columnCount + 1);
+  column.header = header;
+  column.key = key;
+  column.width = width;
+  styleHeader(sheet.getRow(1));
+}
+
 async function archivePrintedSpending({ spending, settings }) {
   if (!spending || !spending.ref) throw new Error("Invalid spending receipt data.");
 
@@ -221,6 +233,7 @@ async function archivePrintedSpending({ spending, settings }) {
   if (sheet.rowCount === 0) {
     sheet.columns = [
       { header: "Spending Ref", key: "ref", width: 20 },
+      { header: "Reference", key: "reference", width: 32 },
       { header: "Created At", key: "createdAt", width: 21 },
       { header: "Description", key: "description", width: 32 },
       { header: "Category", key: "category", width: 18 },
@@ -233,6 +246,7 @@ async function archivePrintedSpending({ spending, settings }) {
     styleHeader(sheet.getRow(1));
     configureSheet(sheet);
   }
+  ensureReferenceColumn(sheet, "Reference", "reference", 32);
 
   const alreadyArchived = sheet.getColumn(1).values.some((value) => String(value || "") === String(spending.ref));
   if (alreadyArchived) {
@@ -245,6 +259,7 @@ async function archivePrintedSpending({ spending, settings }) {
 
   const row = sheet.addRow({
     ref: textValue(spending.ref),
+    reference: textValue(spending.reference),
     createdAt: date,
     description: textValue(spending.description),
     category: textValue(spending.category),
