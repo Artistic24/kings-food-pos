@@ -17,3 +17,5 @@ export interface AndroidPrinterPlugin {
 }
 
 export const AndroidPrinter = registerPlugin<AndroidPrinterPlugin>("KingsFoodPrinter");
+
+// Android native printing: system preview selects the connected printer.
