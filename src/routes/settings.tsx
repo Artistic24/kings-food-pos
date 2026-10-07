@@ -68,7 +68,7 @@ function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="flex items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-extrabold">Settings</h1><p className="mt-1 text-xs text-muted-foreground">Kings Food POS v1.2.1</p></div></div>
+      <div className="flex items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-extrabold">Settings</h1><p className="mt-1 text-xs text-muted-foreground">Kings Food POS v1.2.2</p></div></div>
 
       {isAndroid ? (
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
