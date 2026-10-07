@@ -3,6 +3,13 @@ name: Kings Food POS Android Release
 on:
   push:
     branches: [main]
+    paths:
+      - "src/lib/androidPrinter.ts"
+      - "src/lib/desktop.ts"
+      - "src/routes/settings.tsx"
+      - "src/routes/spending.tsx"
+      - "scripts/prepare-android.mjs"
+      - "package.json"
   workflow_dispatch:
 
 permissions:
@@ -10,7 +17,6 @@ permissions:
 
 jobs:
   build-android-release:
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'feat: android-printing-release') || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
