@@ -27,6 +27,7 @@ export type KingsFoodDesktopBridge = {
   getPrinters: () => Promise<DesktopPrinter[]>;
   printReceipt: (options?: { printerName?: string }) => Promise<PrintResult>;
   archiveReceipt: (payload: { order: unknown; settings: unknown }) => Promise<ArchiveResult>;
+  archiveSpending: (payload: { spending: unknown; settings: unknown }) => Promise<ArchiveResult>;
   openReceiptsFolder: () => Promise<{ success: boolean; path?: string }>;
 };
 
