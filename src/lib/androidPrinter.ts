@@ -19,3 +19,4 @@ export interface AndroidPrinterPlugin {
 export const AndroidPrinter = registerPlugin<AndroidPrinterPlugin>("KingsFoodPrinter");
 
 // Android native printing: system preview selects the connected printer.
+// Excel receipts are saved through the native Android storage bridge.
