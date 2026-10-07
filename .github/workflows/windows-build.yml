@@ -79,4 +79,7 @@ jobs:
             gh release upload $tag $installer --clobber
           } else {
             gh release create $tag $installer --title "Kings Food POS ${{ steps.version.outputs.version }}" --generate-notes
+            if ($LASTEXITCODE -ne 0) {
+              gh release upload $tag $installer --clobber
+            }
           }
