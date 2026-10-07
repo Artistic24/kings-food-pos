@@ -65,21 +65,26 @@ function registerIpcHandlers() {
   registerIpcHandlers.registered = true;
 
   ipcMain.handle("kings-food:get-printers", async (event) => {
-    const printers = await event.sender.getPrintersAsync();
-    return printers.map((printer) => ({
+    try {
+      const printers = await event.sender.getPrintersAsync();
+      return printers.map((printer) => ({
       name: printer.name,
       displayName: printer.displayName,
       description: printer.description,
       status: printer.status,
-      isDefault: printer.isDefault,
-    }));
+        isDefault: printer.isDefault,
+      }));
+    } catch (error) {
+      console.warn("Kings Food could not enumerate printers:", error);
+      return [];
+    }
   });
 
   ipcMain.handle("kings-food:print-receipt", async (event, options = {}) => {
     return await new Promise((resolve) => {
       const printerName = typeof options.printerName === "string" ? options.printerName.trim() : "";
       const printOptions = {
-        silent: true,
+        silent: false,
         printBackground: true,
         color: true,
         margins: { marginType: "none" },
