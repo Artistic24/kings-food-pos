@@ -8,7 +8,7 @@ export function Receipt({ order, settings }: { order: Order; settings: Settings 
   return (
     <div className="receipt-content space-y-3 rounded-lg border border-dashed border-border bg-card p-4 text-sm">
       <div className="text-center">
-        <img src="/icons/kf-mark.png" alt="" width={48} height={48} className="mx-auto size-12 object-contain" />
+        <img src={settings.receiptLogo || "/icons/kf-mark.png"} alt="" width={48} height={48} className="mx-auto size-12 object-contain" />
         <p className="font-display text-lg font-extrabold uppercase">{settings.businessName}</p>
         <p className="text-xs text-muted-foreground">{settings.address}{settings.phone && ` · ${settings.phone}`}</p>
         <p className="text-xs text-muted-foreground">
