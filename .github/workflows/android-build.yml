@@ -2,14 +2,8 @@ name: Kings Food POS Android Release
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "src/lib/androidPrinter.ts"
-      - "src/lib/desktop.ts"
-      - "src/routes/settings.tsx"
-      - "src/routes/spending.tsx"
-      - "scripts/prepare-android.mjs"
-      - "package.json"
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -123,16 +117,17 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish APK without replacing existing release assets
+      - name: Publish APK release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.version.outputs.version }}"
           TITLE="Kings Food POS ${{ steps.version.outputs.version }}"
           ASSET="Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAG="v1.2.0"
-            ASSET="Kings-Food-POS-${{ steps.version.outputs.version }}-Android-Printing.apk"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET"
+          else
+            gh release create "$TAG" "$ASSET" --title "$TITLE" --generate-notes
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ASSET"
