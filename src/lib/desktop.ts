@@ -4,6 +4,7 @@ export type DesktopPrinter = {
   description?: string;
   status?: number;
   isDefault?: boolean;
+  source?: "electron" | "windows";
 };
 
 export type PrintResult = {
