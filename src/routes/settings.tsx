@@ -68,7 +68,7 @@ function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-8">
-      <h1 className="font-display text-2xl font-extrabold">Settings</h1>
+      <div className="flex items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-extrabold">Settings</h1><p className="mt-1 text-xs text-muted-foreground">Kings Food POS v1.2.1</p></div></div>
 
       {isAndroid ? (
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
@@ -98,7 +98,7 @@ function SettingsPage() {
               <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="font-display font-bold">Receipt printer</h2>
+                    <h2 className="font-display font-bold">Windows printer settings</h2>
                     <p className="text-xs text-muted-foreground">
                       Printers installed or connected to this computer are detected automatically. Select the printer you want Kings Food POS to use, then save settings.
                     </p>
@@ -149,6 +149,23 @@ function SettingsPage() {
                   Every successful printed receipt is archived automatically into a daily Excel workbook in your Windows Documents/Kings Food POS/Receipts folder.
                 </p>
       </section>
+      )}
+
+      {!isAndroid && (
+        <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display font-bold">Receipt archive</h2>
+              <p className="text-xs text-muted-foreground">Every successfully printed POS or Spending receipt is automatically saved as an Excel workbook in Documents/Kings Food POS/Receipts.</p>
+            </div>
+            <Button variant="outline" className="rounded-full" onClick={() => void window.kingsFoodDesktop?.openReceiptsFolder()} disabled={!window.kingsFoodDesktop}>
+              <FolderOpen className="size-4" /> Open archive
+            </Button>
+          </div>
+          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            POS receipts: daily Excel workbook with receipt and item details. Spending receipts: separate daily Excel workbook. If a workbook is locked, Kings Food creates a fallback Excel file so the record is not lost.
+          </div>
+        </section>
       )}
 
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
