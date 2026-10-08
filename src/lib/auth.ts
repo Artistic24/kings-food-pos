@@ -14,6 +14,7 @@ const STORAGE_KEY = "kings-food-google-account-v1";
 
 export interface KingsFoodAuthPlugin {
   signInWithGoogle(options: { serverClientId: string }): Promise<GoogleAccount>;
+  signOutGoogle(): Promise<void>;
 }
 
 export const KingsFoodAuth = registerPlugin<KingsFoodAuthPlugin>("KingsFoodAuth");
