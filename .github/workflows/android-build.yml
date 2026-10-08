@@ -11,6 +11,8 @@ permissions:
 jobs:
   build-android-release:
     runs-on: ubuntu-latest
+    env:
+      VITE_GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
     timeout-minutes: 45
 
     steps:
