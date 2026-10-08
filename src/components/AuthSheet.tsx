@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { LogOut, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ function GoogleMark() {
 export function AuthSheet({ open, onOpenChange, onAccountChange }: AuthSheetProps) {
   const [account, setAccount] = useState<GoogleAccount | null>(() => getStoredAccount());
   const [busy, setBusy] = useState(false);
+  const nativeGoogleAvailable = Capacitor.getPlatform() === "android" && Capacitor.isNativePlatform();
 
   useEffect(() => {
     if (open) setAccount(getStoredAccount());
@@ -110,7 +112,7 @@ export function AuthSheet({ open, onOpenChange, onAccountChange }: AuthSheetProp
             <div className="space-y-4">
               <Button
                 type="button"
-                disabled={busy}
+                disabled={busy || !nativeGoogleAvailable}
                 onClick={() => void continueWithGoogle()}
                 className="h-14 w-full rounded-full border border-border bg-white px-5 text-base font-semibold text-foreground shadow-sm hover:bg-white"
               >
@@ -119,7 +121,9 @@ export function AuthSheet({ open, onOpenChange, onAccountChange }: AuthSheetProp
               </Button>
 
               <p className="text-center text-xs leading-5 text-muted-foreground">
-                On Android, Google uses the system Credential Manager. The account selector appears as a native bottom sheet inside the app instead of redirecting to a browser.
+                {nativeGoogleAvailable
+                  ? "Google uses Android Credential Manager here. The account selector appears as a native bottom sheet inside the app instead of redirecting to a browser."
+                  : "Native Google account selection is currently enabled for the Android app. The POS itself remains fully usable offline."}
               </p>
             </div>
           )}
