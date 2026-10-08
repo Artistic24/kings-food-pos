@@ -1,4 +1,4 @@
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 
 export type GoogleAccount = {
   provider: "google";
@@ -12,15 +12,11 @@ export type GoogleAccount = {
 
 const STORAGE_KEY = "kings-food-google-account-v1";
 
-declare global {
-  interface Window {
-    kingsFoodAuth?: {
-      isAvailable: boolean;
-      signInWithGoogle: (options?: { serverClientId?: string }) => Promise<GoogleAccount>;
-      signOutGoogle?: () => Promise<void>;
-    };
-  }
+export interface KingsFoodAuthPlugin {
+  signInWithGoogle(options: { serverClientId: string }): Promise<GoogleAccount>;
 }
+
+export const KingsFoodAuth = registerPlugin<KingsFoodAuthPlugin>("KingsFoodAuth");
 
 export function getStoredAccount(): GoogleAccount | null {
   try {
@@ -41,12 +37,8 @@ export function clearStoredAccount() {
 
 export async function signInWithGoogle(): Promise<GoogleAccount> {
   if (Capacitor.getPlatform() === "android" && Capacitor.isNativePlatform()) {
-    const bridge = window.kingsFoodAuth;
-    if (!bridge?.isAvailable) {
-      throw new Error("Google Sign-In is not available in this Android build.");
-    }
     const serverClientId = String(import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID || "").trim();
-    const account = await bridge.signInWithGoogle({ serverClientId });
+    const account = await KingsFoodAuth.signInWithGoogle({ serverClientId });
     saveStoredAccount(account);
     return account;
   }
