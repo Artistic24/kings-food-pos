@@ -45,7 +45,8 @@ export async function signInWithGoogle(): Promise<GoogleAccount> {
     if (!bridge?.isAvailable) {
       throw new Error("Google Sign-In is not available in this Android build.");
     }
-    const account = await bridge.signInWithGoogle();
+    const serverClientId = String(import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID || "").trim();
+    const account = await bridge.signInWithGoogle({ serverClientId });
     saveStoredAccount(account);
     return account;
   }
