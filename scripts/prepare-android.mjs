@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const androidRoot = path.resolve("android");
+
+const appGradlePath = path.join(androidRoot, "app/build.gradle");
 const manifestPath = path.join(androidRoot, "app/src/main/AndroidManifest.xml");
 const activityPath = path.join(
   androidRoot,
@@ -44,6 +46,22 @@ manifest = manifest.replace(
 );
 fs.writeFileSync(manifestPath, manifest);
 
+if (fs.existsSync(appGradlePath)) {
+  let appGradle = fs.readFileSync(appGradlePath, "utf8");
+  const googleAuthDependencies = [
+    '    implementation "androidx.credentials:credentials:1.6.0"',
+    '    implementation "androidx.credentials:credentials-play-services-auth:1.6.0"',
+    '    implementation "com.google.android.libraries.identity.googleid:googleid:1.2.1"',
+  ].join("\\n");
+  if (!appGradle.includes("androidx.credentials:credentials")) {
+    if (!appGradle.includes("dependencies {")) {
+      throw new Error("Android app Gradle file has no dependencies block.");
+    }
+    appGradle = appGradle.replace("dependencies {", "dependencies {\\n" + googleAuthDependencies);
+    fs.writeFileSync(appGradlePath, appGradle);
+  }
+}
+
 if (fs.existsSync(iconSource)) {
   fs.mkdirSync(iconDir, { recursive: true });
   fs.copyFileSync(iconSource, iconTarget);
@@ -55,6 +73,133 @@ const pluginPath = path.join(
   androidRoot,
   "app/src/main/java/com/kingsfood/pos/KingsFoodPrinterPlugin.java",
 );
+
+const authPluginPath = path.join(
+  androidRoot,
+  "app/src/main/java/com/kingsfood/pos/KingsFoodAuthPlugin.java",
+);
+const authPluginJava = \`package com.kingsfood.pos;
+
+import android.app.Activity;
+import android.os.CancellationSignal;
+
+import androidx.credentials.Credential;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CustomCredential;
+import androidx.credentials.GetCredentialRequest;
+import androidx.credentials.GetCredentialResponse;
+import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.exceptions.GetCredentialException;
+import androidx.credentials.exceptions.NoCredentialException;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+@CapacitorPlugin(name = "KingsFoodAuth")
+public class KingsFoodAuthPlugin extends Plugin {
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    @PluginMethod
+    public void signInWithGoogle(PluginCall call) {
+        String serverClientId = call.getString("serverClientId", "");
+        if (serverClientId == null || serverClientId.trim().isEmpty()) {
+            call.reject("Google Sign-In is not configured. Set VITE_GOOGLE_WEB_CLIENT_ID to your Google Web OAuth client ID.");
+            return;
+        }
+
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("Android activity is unavailable.");
+            return;
+        }
+
+        activity.runOnUiThread(() -> requestGoogleCredential(call, serverClientId.trim(), true));
+    }
+
+    private void requestGoogleCredential(final PluginCall call, final String serverClientId, final boolean authorizedOnly) {
+        try {
+            CredentialManager credentialManager = CredentialManager.create(getContext());
+
+            GetGoogleIdOption googleIdOption = new GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(authorizedOnly)
+                .setAutoSelectEnabled(false)
+                .setServerClientId(serverClientId)
+                .build();
+
+            GetCredentialRequest request = new GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build();
+
+            credentialManager.getCredentialAsync(
+                getContext(),
+                request,
+                (CancellationSignal) null,
+                executor,
+                new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                    @Override
+                    public void onResult(GetCredentialResponse response) {
+                        handleCredential(call, response);
+                    }
+
+                    @Override
+                    public void onError(GetCredentialException error) {
+                        if (authorizedOnly && error instanceof NoCredentialException) {
+                            requestGoogleCredential(call, serverClientId, false);
+                        } else {
+                            call.reject(error.getMessage() == null ? "Google sign-in was cancelled or unavailable." : error.getMessage());
+                        }
+                    }
+                }
+            );
+        } catch (Exception error) {
+            call.reject("Could not open the Google account chooser.", error);
+        }
+    }
+
+    private void handleCredential(PluginCall call, GetCredentialResponse response) {
+        Credential credential = response.getCredential();
+
+        if (!(credential instanceof CustomCredential)
+            || !GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(credential.getType())) {
+            call.reject("Google did not return a supported account credential.");
+            return;
+        }
+
+        try {
+            GoogleIdTokenCredential google = GoogleIdTokenCredential.createFrom(credential.getData());
+            JSObject ret = new JSObject();
+            ret.put("provider", "google");
+            ret.put("uniqueId", google.getUniqueId());
+            ret.put("email", google.getEmail());
+            ret.put("displayName", google.getDisplayName());
+            ret.put("givenName", google.getGivenName());
+            ret.put("familyName", google.getFamilyName());
+            if (google.getProfilePictureUri() != null) {
+                ret.put("profilePictureUrl", google.getProfilePictureUri().toString());
+            }
+            call.resolve(ret);
+        } catch (GoogleIdTokenParsingException error) {
+            call.reject("Google returned an invalid identity credential.", error);
+        }
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        executor.shutdownNow();
+        super.handleOnDestroy();
+    }
+}
+\`;
+
 const pluginJava = `package com.kingsfood.pos;
 
 import android.app.Activity;
@@ -248,6 +393,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
 `;
 
 fs.writeFileSync(pluginPath, pluginJava);
+fs.writeFileSync(authPluginPath, authPluginJava);
 
 const java = `package com.kingsfood.pos;
 
@@ -258,6 +404,7 @@ import android.os.Bundle;
 import androidx.core.app.ActivityCompat;
 import com.getcapacitor.BridgeActivity;
 import com.kingsfood.pos.KingsFoodPrinterPlugin;
+import com.kingsfood.pos.KingsFoodAuthPlugin;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -267,6 +414,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(KingsFoodPrinterPlugin.class);
+        registerPlugin(KingsFoodAuthPlugin.class);
         super.onCreate(savedInstanceState);
         requestKingsFoodPermissions();
     }
