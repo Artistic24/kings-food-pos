@@ -58,7 +58,6 @@ export function AuthSheet({ open, onOpenChange, onAccountChange }: AuthSheetProp
 
   const signOut = async () => {
     clearStoredAccount();
-    await window.kingsFoodAuth?.signOutGoogle?.();
     setAccount(null);
     onAccountChange?.(null);
     toast.success("Signed out");
