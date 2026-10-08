@@ -127,7 +127,7 @@ public class KingsFoodAuthPlugin extends Plugin {
 
     private void requestGoogleCredential(final PluginCall call, final String serverClientId, final boolean authorizedOnly) {
         try {
-            CredentialManager credentialManager = CredentialManager.create(getContext());
+            CredentialManager credentialManager = CredentialManager.create(activity);
 
             GetGoogleIdOption googleIdOption = new GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(authorizedOnly)
@@ -140,7 +140,7 @@ public class KingsFoodAuthPlugin extends Plugin {
                 .build();
 
             credentialManager.getCredentialAsync(
-                getContext(),
+                activity,
                 request,
                 (CancellationSignal) null,
                 executor,
