@@ -52,12 +52,12 @@ if (fs.existsSync(appGradlePath)) {
     '    implementation "androidx.credentials:credentials:1.6.0"',
     '    implementation "androidx.credentials:credentials-play-services-auth:1.6.0"',
     '    implementation "com.google.android.libraries.identity.googleid:googleid:1.2.1"',
-  ].join("\\n");
+  ].join("\n");
   if (!appGradle.includes("androidx.credentials:credentials")) {
     if (!appGradle.includes("dependencies {")) {
       throw new Error("Android app Gradle file has no dependencies block.");
     }
-    appGradle = appGradle.replace("dependencies {", "dependencies {\\n" + googleAuthDependencies);
+    appGradle = appGradle.replace("dependencies {", "dependencies {\n" + googleAuthDependencies);
     fs.writeFileSync(appGradlePath, appGradle);
   }
 }
