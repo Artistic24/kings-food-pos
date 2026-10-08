@@ -78,7 +78,7 @@ const authPluginPath = path.join(
   androidRoot,
   "app/src/main/java/com/kingsfood/pos/KingsFoodAuthPlugin.java",
 );
-const authPluginJava = \`package com.kingsfood.pos;
+const authPluginJava = `package com.kingsfood.pos;
 
 import android.app.Activity;
 import android.os.CancellationSignal;
@@ -198,7 +198,7 @@ public class KingsFoodAuthPlugin extends Plugin {
         super.handleOnDestroy();
     }
 }
-\`;
+`;
 
 const pluginJava = `package com.kingsfood.pos;
 
