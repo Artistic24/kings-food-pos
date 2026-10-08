@@ -7,6 +7,7 @@ import {
   clearStoredAccount,
   getStoredAccount,
   signInWithGoogle,
+  KingsFoodAuth,
   type GoogleAccount,
 } from "@/lib/auth";
 import {
@@ -60,6 +61,9 @@ export function AuthSheet({ open, onOpenChange, onAccountChange }: AuthSheetProp
 
   const signOut = async () => {
     clearStoredAccount();
+    if (nativeGoogleAvailable) {
+      await KingsFoodAuth.signOutGoogle().catch(() => {});
+    }
     setAccount(null);
     onAccountChange?.(null);
     toast.success("Signed out");
