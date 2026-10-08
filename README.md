@@ -49,3 +49,11 @@ npm run electron:dev
 ## Local data
 
 The database is named `kings-food` and is versioned in `src/lib/db.ts`. Clearing the application's site/app data will remove the local POS database, so use the application's future backup/export feature before resetting a production device.
+## Google account sign-in on Android
+
+Kings Food POS uses Android Credential Manager for Google sign-in. The Google account chooser is a native Android bottom sheet, so users do not get redirected to an external browser. Returning users can also benefit from Credential Manager's automatic account selection behavior.
+
+Before distributing an Android build with Google sign-in enabled, configure a Google OAuth Web application client ID and add it as the GitHub repository variable `GOOGLE_WEB_CLIENT_ID`. The Android app uses that value as the Google "server client ID" required by Credential Manager.
+
+The current offline-first POS stores the selected Google profile locally on the device. It does not yet provide a cloud database or cross-device account synchronization.
+
