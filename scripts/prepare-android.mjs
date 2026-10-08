@@ -89,6 +89,8 @@ import androidx.credentials.CustomCredential;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.ClearCredentialStateRequest;
+import androidx.credentials.exceptions.ClearCredentialException;
 import androidx.credentials.exceptions.GetCredentialException;
 import androidx.credentials.exceptions.NoCredentialException;
 
@@ -131,7 +133,7 @@ public class KingsFoodAuthPlugin extends Plugin {
 
             GetGoogleIdOption googleIdOption = new GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(authorizedOnly)
-                .setAutoSelectEnabled(false)
+                .setAutoSelectEnabled(authorizedOnly)
                 .setServerClientId(serverClientId)
                 .build();
 
@@ -189,6 +191,31 @@ public class KingsFoodAuthPlugin extends Plugin {
             call.resolve(ret);
         } catch (GoogleIdTokenParsingException error) {
             call.reject("Google returned an invalid identity credential.", error);
+        }
+    }
+
+    @PluginMethod
+    public void signOutGoogle(PluginCall call) {
+        try {
+            CredentialManager credentialManager = CredentialManager.create(getActivity());
+            credentialManager.clearCredentialStateAsync(
+                new ClearCredentialStateRequest(),
+                null,
+                executor,
+                new CredentialManagerCallback<Void, ClearCredentialException>() {
+                    @Override
+                    public void onResult(Void result) {
+                        call.resolve();
+                    }
+
+                    @Override
+                    public void onError(ClearCredentialException error) {
+                        call.reject(error.getMessage() == null ? "Could not clear Google sign-in state." : error.getMessage());
+                    }
+                }
+            );
+        } catch (Exception error) {
+            call.reject("Could not clear Google sign-in state.", error);
         }
     }
 
