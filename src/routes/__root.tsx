@@ -7,8 +7,8 @@ import {
   HeadContent,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { ChefHat, ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChefHat, ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards, UserCircle } from "lucide-react";
 import textLogo from "@/assets/kf-text-logo.png.asset.json";
 
 import appCss from "../styles.css?url";
@@ -16,6 +16,8 @@ import { registerServiceWorker } from "../lib/pwa";
 import { InstallButton } from "../components/InstallButton";
 import { Toaster } from "@/components/ui/sonner";
 import { setLang, startDomTranslation, useLang } from "@/lib/i18n";
+import { AuthSheet } from "@/components/AuthSheet";
+import { getStoredAccount, type GoogleAccount } from "@/lib/auth";
 
 function LangToggle() {
   const lang = useLang();
@@ -127,6 +129,8 @@ const NAV = [
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [account, setAccount] = useState<GoogleAccount | null>(() => getStoredAccount());
 
   useEffect(() => {
     registerServiceWorker();
@@ -165,6 +169,21 @@ function RootComponent() {
             </nav>
             <div className="flex items-center gap-2">
               <LangToggle />
+              <button
+                type="button"
+                onClick={() => setAuthOpen(true)}
+                className="inline-flex h-9 max-w-44 items-center gap-2 rounded-full border border-border bg-card px-3 text-sm font-semibold shadow-sm transition hover:bg-muted"
+                aria-label={account ? "Open account" : "Log in or sign up"}
+              >
+                {account?.profilePictureUrl ? (
+                  <img src={account.profilePictureUrl} alt="" className="size-6 rounded-full object-cover" />
+                ) : (
+                  <UserCircle className="size-5" />
+                )}
+                <span className="hidden truncate sm:inline">
+                  {account ? (account.displayName || account.email) : "Log in"}
+                </span>
+              </button>
               <InstallButton />
             </div>
           </div>
@@ -196,6 +215,7 @@ function RootComponent() {
       </div>
         <Toaster position="top-center" />
       </QueryClientProvider>
+      <AuthSheet open={authOpen} onOpenChange={setAuthOpen} onAccountChange={setAccount} />
     </>
   );
 }
