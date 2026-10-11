@@ -139,6 +139,6 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Medical Centre POS"
     },
-    "icon": "public/icons/icon-512.png"
+    "icon": "public/icons/medical-centre.ico"
   }
 }
