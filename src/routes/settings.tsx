@@ -169,8 +169,8 @@ function SettingsPage() {
       )}
 
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
-        <h2 className="font-display font-bold">Language</h2>
-        <p className="text-xs text-muted-foreground">Choose the language used across the app.</p>
+        <h2 className="font-display font-bold">Langue</h2>
+        <p className="text-xs text-muted-foreground">Choisissez la langue de l’application.</p>
         <div className="flex gap-2">
           <Button variant={lang === "en" ? "default" : "outline"} className="rounded-full" onClick={() => setLang("en")}>English</Button>
           <Button variant={lang === "fr" ? "default" : "outline"} className="rounded-full" onClick={() => setLang("fr")}>French</Button>
@@ -179,9 +179,9 @@ function SettingsPage() {
 
 
       <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-soft md:grid-cols-2">
-        <h2 className="font-display font-bold md:col-span-2">Business</h2>
+        <h2 className="font-display font-bold md:col-span-2">Établissement</h2>
         <div className="space-y-2 md:col-span-2">
-          <Label>Receipt logo / profile image</Label>
+          <Label>Logo du centre (facultatif)</Label>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex size-20 items-center justify-center rounded-xl border border-dashed border-border bg-muted/40 p-2">
               {s.receiptLogo ? <img src={s.receiptLogo} alt="Logo du centre" className="max-h-full max-w-full object-contain" /> : <span className="text-center text-[10px] text-muted-foreground">Logo facultatif</span>}
@@ -217,14 +217,14 @@ function SettingsPage() {
         {field("Caissier / agent d'impression", "cashierName")}
         {field("Pied du reçu", "receiptFooter")}
         <div className="space-y-1.5">
-          <Label>Tax rate (%)</Label>
+          <Label>Taux de taxe (%)</Label>
           <Input type="number" value={s.taxRate} onChange={(e) => setS({ ...s, taxRate: Number(e.target.value) })} />
         </div>
       </section>
 
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
         <div className="flex items-center justify-between">
-          <h2 className="font-display font-bold">Payment methods & QR codes</h2>
+          <h2 className="font-display font-bold">Modes de paiement et QR codes</h2>
           <Button size="sm" className="rounded-full" onClick={() => setS({ ...s, payments: [...s.payments, { id: uid(), name: "New method", account: "", holder: "", instructions: "", enabled: true }] })}>
             <Plus className="size-4" /> Add
           </Button>
@@ -257,7 +257,7 @@ function SettingsPage() {
 
 
 
-      <Button className="w-full rounded-full md:w-auto" onClick={save}>Save settings</Button>
+      <Button className="w-full rounded-full md:w-auto" onClick={save}>Enregistrer les paramètres</Button>
     </div>
   );
 }
