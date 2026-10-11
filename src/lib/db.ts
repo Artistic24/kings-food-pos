@@ -183,12 +183,9 @@ async function seed(db: IDBPDatabase<KingsDB>) {
     { id: "c-theater", name: "Théâtre", createdAt: now + 7 },
   ];
   const examples: Array<Pick<Dish, "id" | "name" | "categoryId" | "price" | "description">> = [
-    { id: "lab-nfs", name: "NFS", categoryId: "c-laboratory", price: 4500, description: "Acte de laboratoire — prix d’exemple" },
-    { id: "lab-crp", name: "CRP", categoryId: "c-laboratory", price: 2000, description: "Acte de laboratoire — prix d’exemple" },
     { id: "lab-tdr", name: "TDR", categoryId: "c-laboratory", price: 500, description: "Test de diagnostic rapide — prix d’exemple" },
     { id: "lab-glucose", name: "Glycémie rapide (One Touch)", categoryId: "c-laboratory", price: 1000, description: "Acte de laboratoire — prix d’exemple" },
     { id: "lab-kit", name: "Kit prélèvement", categoryId: "c-laboratory", price: 500, description: "Matériel de prélèvement — prix d’exemple" },
-    { id: "pharm-amoxiclav", name: "Amoxiclav SP", categoryId: "c-pharmacy", price: 3500, description: "Article de pharmacie — prix d’exemple, à valider par l’établissement" },
     { id: "pharm-betastene", name: "Betastene goutte", categoryId: "c-pharmacy", price: 4000, description: "Article de pharmacie — prix d’exemple, à valider par l’établissement" },
     { id: "care-kit", name: "Kit de soins", categoryId: "c-care", price: 500, description: "Article de soins — prix d’exemple" },
     { id: "pharm-paracetamol-infu", name: "Paracetamol infu", categoryId: "c-pharmacy", price: 2500, description: "Importé du catalogue St Josephs — vérifier le tarif", },
