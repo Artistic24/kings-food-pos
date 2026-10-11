@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteCategory, deleteDish, listCategories, listDishes, saveCategory, saveDish, uid, type Dish } from "@/lib/db";
+import { deleteCategory, deleteDish, listCategories, listArticles & actes, saveCategory, saveDish, uid, type Dish } from "@/lib/db";
 import { fcfa, fileToDataUrl } from "@/lib/kings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,23 +15,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 export const Route = createFileRoute("/menu")({
   head: () => ({
     meta: [
-      { title: "Menu — Kings Food" },
-      { name: "description", content: "Manage menu categories and dishes with photos, prices and descriptions." },
-      { property: "og:title", content: "Menu — Kings Food" },
-      { property: "og:description", content: "Add, edit and delete dishes and categories." },
+      { title: "Articles & actes — Centre médical" },
+      { name: "description", content: "Gérez les actes, articles de pharmacie, soins et leurs tarifs." },
+      { property: "og:title", content: "Articles & actes — Centre médical" },
+      { property: "og:description", content: "Add, edit and delete articles/actes and categories." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: MenuPage,
+  component: Articles & actesPage,
 });
 
 type Draft = Omit<Dish, "photo"> & { photo?: string | undefined };
 
-function MenuPage() {
+function Articles & actesPage() {
   const qc = useQueryClient();
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: listCategories });
-  const { data: dishes = [] } = useQuery({ queryKey: ["dishes"], queryFn: listDishes });
+  const { data: articles/actes = [] } = useQuery({ queryKey: ["articles/actes"], queryFn: listArticles & actes });
   const [newCat, setNewCat] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const refresh = () => qc.invalidateQueries();
@@ -54,7 +54,7 @@ function MenuPage() {
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <h1 className="font-display text-2xl font-extrabold">Menu</h1>
+        <h1 className="font-display text-2xl font-extrabold">Articles & actes</h1>
         <div className="flex gap-2">
           <Input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="New category" />
           <Button
@@ -76,7 +76,7 @@ function MenuPage() {
               <button
                 aria-label={`Delete ${c.name}`}
                 onClick={async () => {
-                  if (!confirm(`Delete "${c.name}" and its dishes?`)) return;
+                  if (!confirm(`Delete "${c.name}" and its articles/actes?`)) return;
                   await deleteCategory(c.id);
                   refresh();
                 }}
@@ -90,13 +90,13 @@ function MenuPage() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold">Dishes</h2>
+          <h2 className="font-display text-lg font-bold">Articles & actes</h2>
           <Button className="rounded-full" onClick={openNew} disabled={!categories.length}>
-            <Plus className="size-4" /> New dish
+            <Plus className="size-4" /> Nouvel article ou acte
           </Button>
         </div>
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {dishes.map((d) => (
+          {articles/actes.map((d) => (
             <li key={d.id} className="flex gap-3 rounded-2xl bg-card p-3 shadow-soft">
               {d.photo ? (
                 <img src={d.photo} alt={d.name} className="size-16 rounded-xl object-cover" />
@@ -174,7 +174,7 @@ function MenuPage() {
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={draft.available} onChange={(e) => setDraft({ ...draft, available: e.target.checked })} /> Available
               </label>
-              <Button className="w-full rounded-full" onClick={save}>Save dish</Button>
+              <Button className="w-full rounded-full" onClick={save}>Enregistrer</Button>
             </div>
           )}
         </DialogContent>
