@@ -1,7 +1,7 @@
 {
-  "name": "Kings Food — Restaurant POS",
-  "short_name": "Kings Food",
-  "description": "Restaurant ordering, kitchen and POS. Works 100% offline.",
+  "name": "Medical Centre POS",
+  "short_name": "Medical Centre",
+  "description": "Cashier, pharmacy and laboratory receipts. Works offline.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
