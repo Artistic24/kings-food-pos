@@ -5,7 +5,7 @@ const androidRoot = path.resolve("android");
 const manifestPath = path.join(androidRoot, "app/src/main/AndroidManifest.xml");
 const activityPath = path.join(
   androidRoot,
-  "app/src/main/java/com/kingsfood/pos/MainActivity.java",
+  "app/src/main/java/com/kingshealth/medicalpos/MainActivity.java",
 );
 const iconSource = path.resolve("public/icons/icon-512.png");
 const iconDir = path.join(androidRoot, "app/src/main/res/drawable");
@@ -53,9 +53,9 @@ if (fs.existsSync(iconSource)) {
 
 const pluginPath = path.join(
   androidRoot,
-  "app/src/main/java/com/kingsfood/pos/KingsFoodPrinterPlugin.java",
+  "app/src/main/java/com/kingshealth/medicalpos/KingsFoodPrinterPlugin.java",
 );
-const pluginJava = `package com.kingsfood.pos;
+const pluginJava = `package com.kingshealth.medicalpos;
 
 import android.app.Activity;
 import android.content.ContentValues;
@@ -249,7 +249,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
 
 fs.writeFileSync(pluginPath, pluginJava);
 
-const java = `package com.kingsfood.pos;
+const java = `package com.kingshealth.medicalpos;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -257,7 +257,7 @@ import android.os.Build;
 import android.os.Bundle;
 import androidx.core.app.ActivityCompat;
 import com.getcapacitor.BridgeActivity;
-import com.kingsfood.pos.KingsFoodPrinterPlugin;
+import com.kingshealth.medicalpos.KingsFoodPrinterPlugin;
 import java.util.ArrayList;
 import java.util.List;
 
