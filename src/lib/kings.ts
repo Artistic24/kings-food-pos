@@ -1,4 +1,4 @@
-export const fcfa = (n: number) => `${Math.round(n).toLocaleString("en-US")} FCFA`;
+export const fcfa = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
 
 export const timeOf = (ts: number) =>
   new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
