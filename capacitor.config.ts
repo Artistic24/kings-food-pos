@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.kingsfood.pos",
-  appName: "Kings Food POS",
+  appId: "com.kingshealth.medicalpos",
+  appName: "Medical Centre POS",
   webDir: "dist",
   android: {
     backgroundColor: "#fffaf4",
