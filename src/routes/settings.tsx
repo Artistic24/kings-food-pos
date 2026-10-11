@@ -17,10 +17,10 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — Kings Food" },
-      { name: "description", content: "Business info, payment methods with QR codes, delivery zones and tax settings." },
-      { property: "og:title", content: "Settings — Kings Food" },
-      { property: "og:description", content: "Configure payments, delivery zones and receipts." },
+      { title: "Paramètres — Centre médical" },
+      { name: "description", content: "Informations du centre, modes de paiement, impression et reçus." },
+      { property: "og:title", content: "Paramètres — Centre médical" },
+      { property: "og:description", content: "Configurez les informations du centre et les reçus." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -59,16 +59,16 @@ function SettingsPage() {
     toast.success("Settings saved");
   };
 
-  const field = (label: string, key: "businessName" | "tagline" | "address" | "phone" | "receiptFooter") => (
+  const field = (label: string, key: "businessName" | "tagline" | "address" | "phone" | "receiptFooter" | "cashierName") => (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <Input value={s[key]} onChange={(e) => setS({ ...s, [key]: e.target.value })} />
+      <Input value={s[key] ?? ""} onChange={(e) => setS({ ...s, [key]: e.target.value })} />
     </div>
   );
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="flex items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-extrabold">Settings</h1><p className="mt-1 text-xs text-muted-foreground">Kings Food POS v1.2.2</p></div></div>
+      <div className="flex items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-extrabold">Settings</h1><p className="mt-1 text-xs text-muted-foreground">Medical Centre POS v1.3.0-medical.1</p></div></div>
 
       {isAndroid ? (
       <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
@@ -76,7 +76,7 @@ function SettingsPage() {
           <div>
             <h2 className="font-display font-bold">Android printer</h2>
             <p className="text-xs text-muted-foreground">
-              Kings Food uses Android's native print system. Manage installed print services and connected printers here. The Android print preview lets you choose the exact available printer before printing.
+              Medical Centre POS uses Android's native print system. Manage installed print services and connected printers here. The Android print preview lets you choose the exact available printer before printing.
             </p>
           </div>
           <Button variant="outline" className="rounded-full" onClick={() => void AndroidPrinter.openPrintSettings()}>
@@ -90,7 +90,7 @@ function SettingsPage() {
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
-          Printed Excel receipts are automatically saved to Downloads/Kings Food POS/Receipts on Android.
+          Printed Excel receipts are automatically saved to Downloads/Medical Centre POS/Receipts on Android.
         </p>
       </section>
 
@@ -100,7 +100,7 @@ function SettingsPage() {
                   <div>
                     <h2 className="font-display font-bold">Windows printer settings</h2>
                     <p className="text-xs text-muted-foreground">
-                      Printers installed or connected to this computer are detected automatically. Select the printer you want Kings Food POS to use, then save settings.
+                      Printers installed or connected to this computer are detected automatically. Select the printer you want Medical Centre POS to use, then save settings.
                     </p>
                   </div>
                   <button
@@ -146,7 +146,7 @@ function SettingsPage() {
                   <FolderOpen className="size-4" /> Open Excel receipts folder
                 </button>
                 <p className="text-xs text-muted-foreground">
-                  Every successful printed receipt is archived automatically into a daily Excel workbook in your Windows Documents/Kings Food POS/Receipts folder.
+                  Every successful printed receipt is archived automatically into a daily Excel workbook in your Windows Documents/Medical Centre POS/Receipts folder.
                 </p>
       </section>
       )}
@@ -156,14 +156,14 @@ function SettingsPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="font-display font-bold">Receipt archive</h2>
-              <p className="text-xs text-muted-foreground">Every successfully printed POS or Spending receipt is automatically saved as an Excel workbook in Documents/Kings Food POS/Receipts.</p>
+              <p className="text-xs text-muted-foreground">Every successfully printed POS or Spending receipt is automatically saved as an Excel workbook in Documents/Medical Centre POS/Receipts.</p>
             </div>
             <Button variant="outline" className="rounded-full" onClick={() => void window.kingsFoodDesktop?.openReceiptsFolder()} disabled={!window.kingsFoodDesktop}>
               <FolderOpen className="size-4" /> Open archive
             </Button>
           </div>
           <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            POS receipts: daily Excel workbook with receipt and item details. Spending receipts: separate daily Excel workbook. If a workbook is locked, Kings Food creates a fallback Excel file so the record is not lost.
+            POS receipts: daily Excel workbook with receipt and item details. Spending receipts: separate daily Excel workbook. If a workbook is locked, Medical Centre POS creates a fallback Excel file so the record is not lost.
           </div>
         </section>
       )}
@@ -184,7 +184,7 @@ function SettingsPage() {
           <Label>Receipt logo / profile image</Label>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex size-20 items-center justify-center rounded-xl border border-dashed border-border bg-muted/40 p-2">
-              <img src={s.receiptLogo || "/icons/kf-mark.png"} alt="Receipt logo preview" className="max-h-full max-w-full object-contain" />
+              {s.receiptLogo ? <img src={s.receiptLogo} alt="Logo du centre" className="max-h-full max-w-full object-contain" /> : <span className="text-center text-[10px] text-muted-foreground">Logo facultatif</span>}
             </div>
             <div className="min-w-0 flex-1 space-y-1.5">
               <Input
@@ -201,7 +201,7 @@ function SettingsPage() {
                   }
                 }}
               />
-              <p className="text-xs text-muted-foreground">Upload the logo or profile image you want printed at the top of POS and Spending receipts.</p>
+              <p className="text-xs text-muted-foreground">Téléversez le logo de l’établissement à afficher sur les reçus, si nécessaire.</p>
             </div>
             {s.receiptLogo && (
               <Button type="button" variant="outline" className="rounded-full" onClick={() => setS({ ...s, receiptLogo: "" })}>
@@ -210,18 +210,15 @@ function SettingsPage() {
             )}
           </div>
         </div>
-        {field("Business name", "businessName")}
-        {field("Tagline", "tagline")}
-        {field("Address", "address")}
-        {field("Phone", "phone")}
-        {field("Receipt footer", "receiptFooter")}
+        {field("Nom du centre médical", "businessName")}
+        {field("Sous-titre (facultatif)", "tagline")}
+        {field("Adresse", "address")}
+        {field("Téléphone", "phone")}
+        {field("Caissier / agent d'impression", "cashierName")}
+        {field("Pied du reçu", "receiptFooter")}
         <div className="space-y-1.5">
           <Label>Tax rate (%)</Label>
           <Input type="number" value={s.taxRate} onChange={(e) => setS({ ...s, taxRate: Number(e.target.value) })} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Number of tables</Label>
-          <Input type="number" value={s.tables} onChange={(e) => setS({ ...s, tables: Number(e.target.value) })} />
         </div>
       </section>
 
@@ -258,23 +255,7 @@ function SettingsPage() {
         })}
       </section>
 
-      <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display font-bold">Delivery zones (Yaoundé)</h2>
-          <Button size="sm" className="rounded-full" onClick={() => setS({ ...s, zones: [...s.zones, { name: "New zone", fee: 1000 }] })}>
-            <Plus className="size-4" /> Add
-          </Button>
-        </div>
-        {s.zones.map((z, i) => (
-          <div key={i} className="flex gap-2">
-            <Input value={z.name} onChange={(e) => setS({ ...s, zones: s.zones.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
-            <Input type="number" className="w-32" value={z.fee} onChange={(e) => setS({ ...s, zones: s.zones.map((x, j) => (j === i ? { ...x, fee: Number(e.target.value) } : x)) })} />
-            <Button size="icon" variant="outline" aria-label="Remove zone" onClick={() => setS({ ...s, zones: s.zones.filter((_, j) => j !== i) })}>
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
-          </div>
-        ))}
-      </section>
+
 
       <Button className="w-full rounded-full md:w-auto" onClick={save}>Save settings</Button>
     </div>
