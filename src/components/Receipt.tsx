@@ -1,5 +1,5 @@
 import type { Order, Settings } from "@/lib/db";
-import { fcfa, dateOf, timeOf } from "@/lib/kings";
+import { fcfa } from "@/lib/kings";
 
 export function Receipt({ order, settings }: { order: Order; settings: Settings }) {
   const pharmacy = order.receiptKind === "pharmacy";
@@ -10,6 +10,9 @@ export function Receipt({ order, settings }: { order: Order; settings: Settings 
   );
   const change = Math.max(0, Number(order.tendered ?? amountPaid) - order.total);
   const remaining = Math.max(0, order.total - amountPaid);
+  const amountReceived = Math.max(0, Number(order.tendered ?? amountPaid));
+  const receiptDate = new Date(order.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  const receiptTime = new Date(order.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const patientName = order.customer?.trim() || "—";
 
   return (
@@ -55,7 +58,7 @@ export function Receipt({ order, settings }: { order: Order; settings: Settings 
               <td className="px-0.5 py-1 text-right">{reductionPercent}%</td>
               <td className="px-0.5 py-1 text-right">{Math.round(item.price).toLocaleString("fr-FR")}</td>
               <td className="px-0.5 py-1 text-right">{item.qty}</td>
-              <td className="py-1 pl-0.5 text-right">{Math.round(item.price * item.qty).toLocaleString("fr-FR")}</td>
+              <td className="py-1 pl-0.5 text-right">{Math.round(item.price * item.qty * (1 - reductionPercent / 100)).toLocaleString("fr-FR")}</td>
             </tr>
           ))}
         </tbody>
@@ -66,7 +69,7 @@ export function Receipt({ order, settings }: { order: Order; settings: Settings 
         <Row label={`Réduction (${reductionPercent}%)`} value={fcfa(order.discount ?? Math.round(order.subtotal * reductionPercent / 100))} />
         {order.tax > 0 && <Row label="Taxes" value={fcfa(order.tax)} />}
         <Row label="Montant Total" value={fcfa(order.total)} strong />
-        <Row label="Montant versé" value={fcfa(amountPaid)} />
+        <Row label="Montant versé" value={fcfa(amountReceived)} />
         <Row label="Montant rendu" value={fcfa(change)} />
         <Row label="Reste à payer" value={fcfa(remaining)} strong />
       </section>
@@ -74,7 +77,7 @@ export function Receipt({ order, settings }: { order: Order; settings: Settings 
       <section className="space-y-1 py-2">
         <Row label="Dette du patient" value={fcfa(remaining)} />
         <Row label="Solde Caution" value={fcfa(order.depositBalance ?? 0)} />
-        <p className="pt-1 text-right">{dateOf(order.createdAt)} · {timeOf(order.createdAt)}</p>
+        <p className="pt-1 text-right">{receiptDate} · {receiptTime}</p>
         {settings.cashierName && <p className="pt-1">Imprimé par : {settings.cashierName}</p>}
       </section>
       {settings.receiptFooter && <p className="mt-2 border-t border-dashed border-foreground/70 pt-2 text-center">{settings.receiptFooter}</p>}
