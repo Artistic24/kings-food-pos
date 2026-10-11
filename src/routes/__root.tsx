@@ -8,7 +8,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards } from "lucide-react";
+import { ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards, Stethoscope } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { registerServiceWorker } from "../lib/pwa";
@@ -140,7 +140,7 @@ function RootComponent() {
         <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur no-print">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
             <Link to="/" className="flex items-center gap-2">
-              <img src="/icons/kf-mark.png" alt="Medical Centre POS" width={44} height={44} className="size-11 object-contain" />
+              <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Stethoscope className="size-6" /></span>
               <span className="font-display text-base font-extrabold">Medical Centre POS</span>
             </Link>
             <nav className="hidden md:block">
