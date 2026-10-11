@@ -2,7 +2,7 @@ name: Medical Centre POS Android Release
 
 on:
   push:
-    branches: [medical-health-center-v1.3.0]
+    branches: [medical-health-center-v1.3.0, release/medical-centre-v1.3.0]
     tags: ["v*-medical*"]
   workflow_dispatch:
 
@@ -119,7 +119,7 @@ jobs:
           retention-days: 30
 
       - name: Publish APK to the versioned GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-medical')
+        if: (startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-medical')) || github.ref == 'refs/heads/release/medical-centre-v1.3.0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -127,6 +127,6 @@ jobs:
           TITLE="Medical Centre POS ${{ steps.version.outputs.version }}"
           ASSET="Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "$TITLE" --notes "Medical Centre POS release. Android APK for medical-centre cashier, pharmacy and laboratory receipts." || gh release view "$TAG" >/dev/null
+            gh release create "$TAG" --title "$TITLE" --notes "Medical Centre POS release. Android APK for medical-centre cashier, pharmacy and laboratory receipts." --target "$GITHUB_SHA" || gh release view "$TAG" >/dev/null
           fi
           gh release upload "$TAG" "$ASSET" --clobber
