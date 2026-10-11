@@ -45,7 +45,8 @@ function PosPage() {
   const [practitioner, setPractitioner] = useState("");
   const [receiptKind, setReceiptKind] = useState<"cashier" | "pharmacy">("cashier");
   const [depositBalance, setDepositBalance] = useState("0");
-  const [reference, setReference] = useState("");  const [pay, setPay] = useState("");
+  const [reference, setReference] = useState("");
+  const [pay, setPay] = useState("");
   const [tendered, setTendered] = useState("");
   const [cardApproved, setCardApproved] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
