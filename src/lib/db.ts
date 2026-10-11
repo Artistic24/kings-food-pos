@@ -159,6 +159,7 @@ function getDB() {
           const spendings = db.createObjectStore("spendings", { keyPath: "id" });
           spendings.createIndex("byCreatedAt", "createdAt");
         }
+      },
     }).then(async (db) => {
       const count = await db.count("categories");
       if (count === 0) await seed(db);
