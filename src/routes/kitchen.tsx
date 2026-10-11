@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/kitchen")({
   head: () => ({
     meta: [
-      { title: "Kitchen — Kings Food" },
-      { name: "description", content: "Track new orders in the kitchen and mark them preparing, ready or served." },
-      { property: "og:title", content: "Kitchen — Kings Food" },
-      { property: "og:description", content: "Live kitchen board for Kings Food orders." },
+      { title: "Suivi — Centre médical" },
+      { name: "description", content: "Suivez les reçus et les patients en attente." },
+      { property: "og:title", content: "Suivi — Centre médical" },
+      { property: "og:description", content: "Liste des reçus en cours." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -50,10 +50,10 @@ function KitchenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-display text-xl font-bold">Kitchen</h1>
+      <h1 className="font-display text-xl font-bold">Suivi des reçus</h1>
       {active.length === 0 ? (
         <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">
-          No pending orders. Enjoy the break!
+          Aucun reçu en attente.
         </p>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -64,7 +64,7 @@ function KitchenPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-display font-bold">
-                    {o.mode === "table" ? `Table ${o.table}` : `Delivery · ${o.zone}`}
+                    {o.mode === "medical" ? (o.customer || "Patient") : o.mode === "table" ? `Table ${o.table}` : `Delivery · ${o.zone}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {o.ref} · {timeOf(o.createdAt)}
