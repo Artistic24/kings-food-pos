@@ -14,10 +14,10 @@ export const makeRef = () => {
   const day = String(now.getDate()).padStart(2, "0");
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = String(now.getFullYear()).slice(-2);
-  const key = `kings-food-ref-${year}${month}${day}`;
+  const key = `medical-centre-ref-${year}${month}${day}`;
   const next = Number(localStorage.getItem(key) ?? "0") + 1;
   localStorage.setItem(key, String(next));
-  return `KF-${dayLetter}${day}${month}${year}-${String(next).padStart(3, "0")}`;
+  return `MC-${dayLetter}${day}${month}${year}-${String(next).padStart(3, "0")}`;
 };
 
 export const STATUS_LABEL: Record<string, string> = {
