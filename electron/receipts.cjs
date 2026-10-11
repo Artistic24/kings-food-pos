@@ -34,11 +34,15 @@ function createReceiptsSheet(workbook) {
   const sheet = workbook.addWorksheet("Receipts");
   sheet.columns = [
     { header: "Receipt Ref", key: "ref", width: 20 },
-    { header: "Reference", key: "reference", width: 32 },
+    { header: "Reference / Note", key: "reference", width: 28 },
+    { header: "Receipt Type", key: "receiptKind", width: 15 },
+    { header: "Patient Code", key: "patientCode", width: 18 },
+    { header: "Service", key: "service", width: 20 },
+    { header: "Practitioner", key: "practitioner", width: 24 },
     { header: "Created At", key: "createdAt", width: 21 },
     { header: "Mode", key: "mode", width: 13 },
     { header: "Table", key: "table", width: 10 },
-    { header: "Customer", key: "customer", width: 24 },
+    { header: "Patient Name", key: "customer", width: 24 },
     { header: "Phone", key: "phone", width: 18 },
     { header: "Zone", key: "zone", width: 18 },
     { header: "Payment", key: "payment", width: 22 },
@@ -47,6 +51,9 @@ function createReceiptsSheet(workbook) {
     { header: "Tax", key: "tax", width: 14 },
     { header: "Delivery", key: "delivery", width: 14 },
     { header: "Total", key: "total", width: 14 },
+    { header: "Amount Paid", key: "amountPaid", width: 16 },
+    { header: "Remaining", key: "remaining", width: 16 },
+    { header: "Deposit Balance", key: "depositBalance", width: 18 },
     { header: "Tendered", key: "tendered", width: 14 },
     { header: "Change", key: "change", width: 14 },
     { header: "Paid", key: "paid", width: 10 },
@@ -85,17 +92,17 @@ async function archivePrintedReceipt({ order, settings }) {
   }
 
   const { date, yyyy, mm, dd } = dateParts(order.createdAt);
-  const root = path.join(require("electron").app.getPath("documents"), "Kings Food POS", "Receipts", yyyy, mm);
+  const root = path.join(require("electron").app.getPath("documents"), "Medical Centre POS", "Receipts", yyyy, mm);
   await fs.promises.mkdir(root, { recursive: true });
 
-  const filePath = path.join(root, `Kings-Food-Receipts-${yyyy}-${mm}-${dd}.xlsx`);
+  const filePath = path.join(root, `Medical-Centre-Receipts-${yyyy}-${mm}-${dd}.xlsx`);
   const tempPath = filePath + ".tmp";
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Kings Food POS";
+  workbook.creator = "Medical Centre POS";
   workbook.created = new Date();
   workbook.modified = new Date();
-  workbook.properties.title = `Kings Food receipts — ${yyyy}-${mm}-${dd}`;
+  workbook.properties.title = `Medical Centre receipts — ${yyyy}-${mm}-${dd}`;
   workbook.properties.subject = "Automatically archived printed receipts";
 
   if (fs.existsSync(filePath)) {
@@ -123,13 +130,19 @@ async function archivePrintedReceipt({ order, settings }) {
     : undefined;
 
   const tendered = Number.isFinite(order.tendered) ? order.tendered : null;
-  const change = tendered == null ? null : Math.max(0, tendered - order.total);
+  const amountPaid = Math.min(Math.max(0, Number(order.amountPaid ?? (order.paid ? order.total : 0))), Number(order.total || 0));
+  const remaining = Math.max(0, Number(order.total || 0) - amountPaid);
+  const change = tendered == null ? 0 : Math.max(0, tendered - order.total);
 
   const row = receipts.addRow({
     ref: textValue(order.ref),
     reference: textValue(order.reference),
+    receiptKind: order.receiptKind === "pharmacy" ? "Pharmacy" : "Cashier",
+    patientCode: textValue(order.patientCode),
+    service: textValue(order.service),
+    practitioner: textValue(order.practitioner),
     createdAt: date,
-    mode: order.mode === "table" ? "Dine-in" : "Delivery",
+    mode: order.mode === "medical" ? "Medical" : order.mode === "table" ? "Dine-in" : "Delivery",
     table: textValue(order.table),
     customer: textValue(order.customer),
     phone: textValue(order.phone),
@@ -140,9 +153,12 @@ async function archivePrintedReceipt({ order, settings }) {
     tax: Number(order.tax || 0),
     delivery: Number(order.deliveryFee || 0),
     total: Number(order.total || 0),
+    amountPaid,
+    remaining,
+    depositBalance: Number(order.depositBalance || 0),
     tendered,
     change,
-    paid: order.paid ? "Yes" : "No",
+    paid: amountPaid >= Number(order.total || 0) ? "Yes" : "No",
     status: textValue(order.status),
     printedAt,
   });
@@ -161,7 +177,7 @@ async function archivePrintedReceipt({ order, settings }) {
     });
   }
 
-  formatMoney(receipts, ["subtotal", "discount", "tax", "delivery", "total", "tendered", "change"]);
+  formatMoney(receipts, ["subtotal", "discount", "tax", "delivery", "total", "amountPaid", "remaining", "depositBalance", "tendered", "change"]);
   formatMoney(items, ["unitPrice", "lineTotal"]);
 
   try {
@@ -178,7 +194,7 @@ async function archivePrintedReceipt({ order, settings }) {
   } catch (error) {
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
 
-    const fallbackPath = path.join(root, `Kings-Food-Receipt-${textValue(order.ref).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`);
+    const fallbackPath = path.join(root, `Medical-Centre-Receipt-${textValue(order.ref).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`);
     await workbook.xlsx.writeFile(fallbackPath);
 
     return {
@@ -195,7 +211,7 @@ async function archivePrintedReceipt({ order, settings }) {
 
 async function openReceiptsFolder() {
   const { shell } = require("electron");
-  const root = path.join(require("electron").app.getPath("documents"), "Kings Food POS", "Receipts");
+  const root = path.join(require("electron").app.getPath("documents"), "Medical Centre POS", "Receipts");
   await fs.promises.mkdir(root, { recursive: true });
   await shell.openPath(root);
   return { success: true, path: root };
@@ -216,16 +232,16 @@ async function archivePrintedSpending({ spending, settings }) {
   if (!spending || !spending.ref) throw new Error("Invalid spending receipt data.");
 
   const { date, yyyy, mm, dd } = dateParts(spending.createdAt);
-  const root = path.join(require("electron").app.getPath("documents"), "Kings Food POS", "Receipts", yyyy, mm);
+  const root = path.join(require("electron").app.getPath("documents"), "Medical Centre POS", "Receipts", yyyy, mm);
   await fs.promises.mkdir(root, { recursive: true });
 
-  const filePath = path.join(root, `Kings-Food-Spending-${yyyy}-${mm}-${dd}.xlsx`);
+  const filePath = path.join(root, `Medical-Centre-Spending-${yyyy}-${mm}-${dd}.xlsx`);
   const tempPath = filePath + ".tmp";
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Kings Food POS";
+  workbook.creator = "Medical Centre POS";
   workbook.created = new Date();
   workbook.modified = new Date();
-  workbook.properties.title = `Kings Food spending — ${yyyy}-${mm}-${dd}`;
+  workbook.properties.title = `Medical Centre spending — ${yyyy}-${mm}-${dd}`;
 
   if (fs.existsSync(filePath)) await workbook.xlsx.readFile(filePath);
 
@@ -280,7 +296,7 @@ async function archivePrintedSpending({ spending, settings }) {
     return { success: true, alreadyArchived: false, filePath, relativePath: path.relative(require("electron").app.getPath("documents"), filePath) };
   } catch (error) {
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
-    const fallbackPath = path.join(root, `Kings-Food-Spending-${textValue(spending.ref).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`);
+    const fallbackPath = path.join(root, `Medical-Centre-Spending-${textValue(spending.ref).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`);
     await workbook.xlsx.writeFile(fallbackPath);
     return {
       success: true,
