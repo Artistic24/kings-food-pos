@@ -8,8 +8,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { ChefHat, ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards } from "lucide-react";
-import textLogo from "@/assets/kf-text-logo.png.asset.json";
+import { ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { registerServiceWorker } from "../lib/pwa";
@@ -59,7 +58,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    console.error("Kings Food POS route error", error);
+    console.error("Medical Centre POS route error", error);
   }, [error]);
 
   return (
@@ -94,13 +93,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Kings Food — Restaurant POS" },
-      { name: "description", content: "Restaurant ordering, kitchen and POS for Kings Food Yaoundé. Works offline." },
+      { title: "Medical Centre POS" },
+      { name: "description", content: "Offline-first medical centre cashier, pharmacy and laboratory receipts." },
       { name: "theme-color", content: "#d9480f" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "Kings Food" },
-      { property: "og:title", content: "Kings Food — Restaurant POS" },
-      { property: "og:description", content: "Restaurant ordering, kitchen and POS for Kings Food Yaoundé. Works offline." },
+      { name: "apple-mobile-web-app-title", content: "Medical Centre POS" },
+      { property: "og:title", content: "Medical Centre POS" },
+      { property: "og:description", content: "Offline-first medical centre cashier, pharmacy and laboratory receipts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -117,12 +116,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 const NAV = [
-  { to: "/", label: "POS", icon: ClipboardList },
-  { to: "/kitchen", label: "Kitchen", icon: ChefHat },
-  { to: "/menu", label: "Menu", icon: LayoutGrid },
-  { to: "/sales", label: "Sales", icon: BarChart3 },
-  { to: "/spending", label: "Spending", icon: WalletCards },
-  { to: "/settings", label: "Settings", icon: SettingsIcon },
+  { to: "/", label: "Caisse", icon: ClipboardList },
+  { to: "/menu", label: "Articles & actes", icon: LayoutGrid },
+  { to: "/sales", label: "Historique", icon: BarChart3 },
+  { to: "/spending", label: "Dépenses", icon: WalletCards },
+  { to: "/settings", label: "Paramètres", icon: SettingsIcon },
 ] as const;
 
 function RootComponent() {
@@ -142,8 +140,8 @@ function RootComponent() {
         <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur no-print">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
             <Link to="/" className="flex items-center gap-2">
-              <img src="/icons/kf-mark.png" alt="Kings Food" width={44} height={44} className="size-11 object-contain" />
-              <img src={textLogo.url} alt="Kings Food" width={120} height={44} className="h-8 w-auto" />
+              <img src="/icons/kf-mark.png" alt="Medical Centre POS" width={44} height={44} className="size-11 object-contain" />
+              <span className="font-display text-base font-extrabold">Medical Centre POS</span>
             </Link>
             <nav className="hidden md:block">
               <ul className="flex gap-1">
@@ -176,7 +174,7 @@ function RootComponent() {
         </main>
 
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden no-print">
-          <ul className="grid grid-cols-6">
+          <ul className="grid grid-cols-5">
             {NAV.map(({ to, label, icon: Icon }) => (
               <li key={to}>
                 <Link
