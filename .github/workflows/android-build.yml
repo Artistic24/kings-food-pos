@@ -127,6 +127,6 @@ jobs:
           TITLE="Medical Centre POS ${{ steps.version.outputs.version }}"
           ASSET="Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "$TITLE" --notes "Medical Centre POS release. Android APK for medical-centre cashier, pharmacy and laboratory receipts."
+            gh release create "$TAG" --title "$TITLE" --notes "Medical Centre POS release. Android APK for medical-centre cashier, pharmacy and laboratory receipts." || gh release view "$TAG" >/dev/null
           fi
           gh release upload "$TAG" "$ASSET" --clobber
