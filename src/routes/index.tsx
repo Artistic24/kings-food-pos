@@ -75,7 +75,11 @@ function PosPage() {
   const method = methods.find((m) => m.id === pay);
   const cashAmount = Number(tendered);
   const cashReady = tendered !== "" && Number.isFinite(cashAmount) && cashAmount >= 0;
-  const paymentReady = pay === "cash" ? cashReady : pay === "card" ? cardApproved : Boolean(method);
+  const paymentReady = pay === "cash"
+    ? cashReady
+    : pay === "card"
+      ? cardApproved
+      : Boolean(method) && cashReady;
   const pressTenderKey = (key: string) => {
     if (key === "C") setTendered("");
     else if (key === "back") setTendered((value) => value.slice(0, -1));
@@ -97,9 +101,9 @@ function PosPage() {
 
   const place = useMutation({
     mutationFn: async () => {
-      const amountPaid = pay === "cash"
-        ? Math.min(Math.max(0, cashAmount), total)
-        : pay === "card" && cardApproved ? total : 0;
+      const amountPaid = pay === "card" && cardApproved
+        ? total
+        : Math.min(Math.max(0, cashAmount), total);
       const order: Order = {
         id: uid(),
         ref: makeRef(),
@@ -233,7 +237,7 @@ function PosPage() {
       </div>
 
       <div className="space-y-1.5">
-        <Label>Payment method</Label>
+        <Label>Mode de paiement</Label>
         <div className="flex flex-wrap gap-2">
           {methods.map((m) => (
             <Button
@@ -269,13 +273,14 @@ function PosPage() {
         </div>
       </div>}
 
-      {pay === "cash" && cart.length > 0 && (
+      {pay !== "card" && cart.length > 0 && (
         <div className="space-y-3" aria-label="Cash payment">
           <div className="rounded-md bg-accent p-4">
             <Label htmlFor="tendered">Montant versé maintenant (FCFA)</Label>
             <Input id="tendered" type="number" min="0" step="1" inputMode="numeric" value={tendered} onChange={(e) => setTendered(e.target.value)} placeholder={String(total)} className="mt-2 bg-card font-display text-xl font-bold" />
             <p className="mt-2 text-sm text-muted-foreground">Rendu <span className="font-bold text-foreground">{fcfa(cashChange(total, cashAmount))}</span><span className="ml-3">Reste <b>{fcfa(Math.max(0, total - Math.min(Math.max(0, cashAmount), total)))}</b></span></p>
-            {tendered !== "" && (!Number.isFinite(cashAmount) || cashAmount < 0) && <p className="mt-1 text-xs text-destructive">Enter a valid amount.</p>}
+            {tendered !== "" && (!Number.isFinite(cashAmount) || cashAmount < 0) && <p className="mt-1 text-xs text-destructive">Saisissez un montant valide.</p>}
+            {pay !== "cash" && tendered !== "" && cashAmount < total && <p className="mt-1 text-xs text-muted-foreground">Paiement partiel : le reste sera indiqué sur le reçu.</p>}
           </div>
           <div className="grid grid-cols-4 gap-2">
             {[total, ...[5000, 10000, 20000].filter((amount) => amount >= total)].slice(0, 4).map((amount, i) => (
@@ -390,7 +395,7 @@ function PosPage() {
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display">Cart</DialogTitle>
+            <DialogTitle className="font-display">Articles du reçu</DialogTitle>
           </DialogHeader>
           {cartPanel}
         </DialogContent>
@@ -399,7 +404,7 @@ function PosPage() {
       <Dialog open={!!receipt} onOpenChange={(o) => !o && setReceipt(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display">Receipt</DialogTitle>
+            <DialogTitle className="font-display">Aperçu du reçu</DialogTitle>
           </DialogHeader>
           {receipt && <Receipt order={receipt} settings={settings} />}
           <Button className="rounded-full no-print" onClick={() => void printCurrentReceipt()}>
