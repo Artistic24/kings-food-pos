@@ -65,32 +65,43 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
   const day = String(date.getDate()).padStart(2, "0");
   const ref = String(data.ref || ("KF-" + createdAt));
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Kings Food POS";
+  workbook.creator = "Medical Centre POS";
   workbook.created = new Date();
   const sheet = workbook.addWorksheet(kind === "sale" ? "Receipt" : "Spending");
 
   if (kind === "sale") {
     sheet.columns = [
-      { header: "Receipt Ref", key: "ref", width: 22 },
-      { header: "Reference", key: "reference", width: 32 },
+      { header: "N° Reçu", key: "ref", width: 22 },
+      { header: "Référence", key: "reference", width: 28 },
+      { header: "Type", key: "receiptKind", width: 16 },
+      { header: "Code Patient", key: "patientCode", width: 18 },
+      { header: "Service", key: "service", width: 20 },
+      { header: "Traitant", key: "practitioner", width: 24 },
       { header: "Date", key: "date", width: 20 },
-      { header: "Item", key: "item", width: 32 },
-      { header: "Qty", key: "qty", width: 10 },
-      { header: "Unit Price", key: "unit", width: 16 },
-      { header: "Line Total", key: "line", width: 16 },
-      { header: "Subtotal", key: "subtotal", width: 16 },
-      { header: "Discount", key: "discount", width: 16 },
-      { header: "Tax", key: "tax", width: 16 },
-      { header: "Delivery", key: "delivery", width: 16 },
+      { header: "Article / Acte", key: "item", width: 32 },
+      { header: "QTE", key: "qty", width: 10 },
+      { header: "PU", key: "unit", width: 16 },
+      { header: "Total ligne", key: "line", width: 16 },
+      { header: "Sous-total", key: "subtotal", width: 16 },
+      { header: "Réduction", key: "discount", width: 16 },
       { header: "Total", key: "total", width: 16 },
-      { header: "Payment", key: "payment", width: 20 },
-      { header: "Tendered", key: "tendered", width: 16 },
-      { header: "Change", key: "change", width: 16 },
+      { header: "Montant versé", key: "amountPaid", width: 16 },
+      { header: "Reste à payer", key: "remaining", width: 16 },
+      { header: "Solde Caution", key: "depositBalance", width: 16 },
+      { header: "Paiement", key: "payment", width: 20 },
+      { header: "Versé en espèces", key: "tendered", width: 16 },
+      { header: "Rendu", key: "change", width: 16 },
     ];
+    const amountPaid = Math.min(Math.max(0, Number(data.amountPaid ?? (data.paid ? data.total : 0))), Number(data.total || 0));
+    const remaining = Math.max(0, Number(data.total || 0) - amountPaid);
     data.items?.forEach((item: any, index: number) => {
       sheet.addRow({
         ref: index === 0 ? ref : "",
         reference: index === 0 ? (data.reference || "") : "",
+        receiptKind: index === 0 ? (data.receiptKind === "pharmacy" ? "Pharmacie" : "Caisse") : "",
+        patientCode: index === 0 ? (data.patientCode || "") : "",
+        service: index === 0 ? (data.service || "LABORATOIRE") : "",
+        practitioner: index === 0 ? (data.practitioner || "") : "",
         date: index === 0 ? date : "",
         item: item.name,
         qty: item.qty,
@@ -98,9 +109,10 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
         line: item.price * item.qty,
         subtotal: index === 0 ? data.subtotal : "",
         discount: index === 0 ? (data.discount || 0) : "",
-        tax: index === 0 ? (data.tax || 0) : "",
-        delivery: index === 0 ? (data.deliveryFee || 0) : "",
         total: index === 0 ? data.total : "",
+        amountPaid: index === 0 ? amountPaid : "",
+        remaining: index === 0 ? remaining : "",
+        depositBalance: index === 0 ? (data.depositBalance || 0) : "",
         payment: index === 0 ? data.paymentMethod : "",
         tendered: index === 0 ? (data.tendered ?? "") : "",
         change: index === 0 && data.tendered !== undefined ? Math.max(0, data.tendered - data.total) : "",
@@ -135,7 +147,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
   sheet.views = [{ state: "frozen", ySplit: 1 }];
   const buffer = await workbook.xlsx.writeBuffer();
   const safeRef = ref.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const prefix = kind === "sale" ? "Kings-Food-Receipt" : "Kings-Food-Spending";
+  const prefix = kind === "sale" ? "Medical-Centre-Receipt" : "Medical-Centre-Spending";
   const fileName = prefix + "-" + safeRef + "-" + year + month + day + ".xlsx";
 
   const saved = await AndroidPrinter.saveExcel({
@@ -160,7 +172,7 @@ export async function printReceiptAndArchive(
   settings: { printerName?: string },
 ): Promise<{ printed: boolean; archived: boolean; fallback: boolean; message?: string }> {
   if (isAndroidApp()) {
-    const printed = await AndroidPrinter.printCurrentPage({ jobName: "Kings Food POS Receipt" });
+    const printed = await AndroidPrinter.printCurrentPage({ jobName: "Medical Centre POS Receipt" });
     if (!printed.success) {
       return { printed: false, archived: false, fallback: false, message: printed.failureReason || "Android printing was cancelled or failed." };
     }
@@ -216,7 +228,7 @@ export async function printSpendingAndArchive(
   settings: { printerName?: string },
 ): Promise<{ printed: boolean; archived: boolean; fallback: boolean; message?: string }> {
   if (isAndroidApp()) {
-    const printed = await AndroidPrinter.printCurrentPage({ jobName: "Kings Food Spending Receipt" });
+    const printed = await AndroidPrinter.printCurrentPage({ jobName: "Medical Centre Spending Receipt" });
     if (!printed.success) {
       return { printed: false, archived: false, fallback: false, message: printed.failureReason || "Android printing was cancelled or failed." };
     }
