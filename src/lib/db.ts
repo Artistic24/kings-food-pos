@@ -161,8 +161,7 @@ function getDB() {
         }
       },
     }).then(async (db) => {
-      const count = await db.count("categories");
-      if (count === 0) await seed(db);
+      await seed(db);
       return db;
     });
   }
@@ -194,10 +193,17 @@ async function seed(db: IDBPDatabase<KingsDB>) {
     available: true,
     createdAt: now + index,
   }));
+  // Add the medical starter catalogue without overwriting items or prices already configured by the centre.
   const tx = db.transaction(["categories", "dishes"], "readwrite");
+  const categoryStore = tx.objectStore("categories");
+  const dishStore = tx.objectStore("dishes");
   await Promise.all([
-    ...cats.map((category) => tx.objectStore("categories").put(category)),
-    ...dishes.map((dish) => tx.objectStore("dishes").put(dish)),
+    ...cats.map(async (category) => {
+      if (!(await categoryStore.get(category.id))) await categoryStore.add(category);
+    }),
+    ...dishes.map(async (dish) => {
+      if (!(await dishStore.get(dish.id))) await dishStore.add(dish);
+    }),
   ]);
   await tx.done;
 }
