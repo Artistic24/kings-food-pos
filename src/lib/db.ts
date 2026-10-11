@@ -97,7 +97,7 @@ export const DEFAULT_SETTINGS: Settings = {
   id: "main",
   businessName: "CENTRE MEDICAL",
   tagline: "Reçus de caisse, laboratoire et pharmacie",
-  address: "Yaoundé, Cameroon",
+  address: "",
   phone: "",
   taxRate: 0,
   receiptFooter: "Merci pour votre confiance.",
