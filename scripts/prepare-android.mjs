@@ -326,14 +326,14 @@ fs.writeFileSync(activityPath, java);
 // Keep the installed Android app version aligned with package.json/release assets.
 const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
 const appVersion = String(packageJson.version || "");
-const versionMatch = appVersion.match(/^(\\d+)\\.(\\d+)\\.(\\d+)(?:-[A-Za-z0-9.-]+)?$/);
+const versionMatch = appVersion.match(/^(\d+)\.(\d+)\.(\d+)(?:-[A-Za-z0-9.-]+)?$/);
 if (!versionMatch) {
-  throw new Error(`Invalid app version in package.json: ${appVersion}`);
+  throw new Error("Invalid app version in package.json: " + appVersion);
 }
 const major = Number(versionMatch[1]);
 const minor = Number(versionMatch[2]);
 const patch = Number(versionMatch[3]);
-const prereleaseMatch = appVersion.match(/-(?:[^.]+\\.)?(\\d+)$/);
+const prereleaseMatch = appVersion.match(/-(?:[^.]+\.)?(\d+)$/);
 const prereleaseNumber = prereleaseMatch ? Number(prereleaseMatch[1]) : 0;
 const versionCode = major * 1000000 + minor * 10000 + patch * 100 + prereleaseNumber;
 const gradlePath = [
@@ -344,16 +344,16 @@ if (!gradlePath) {
   throw new Error("Android app Gradle file is missing.");
 }
 let gradle = fs.readFileSync(gradlePath, "utf8");
-if (!/versionCode(?:\\s*=\\s*|\\s+)\\d+/.test(gradle) || !/versionName(?:\\s*=\\s*|\\s+)["'][^"']+["']/.test(gradle)) {
+if (!/versionCode(?:\s*=\s*|\s+)\d+/.test(gradle) || !/versionName(?:\s*=\s*|\s+)["'][^"']+["']/.test(gradle)) {
   throw new Error("Could not find Android versionCode/versionName in the app Gradle file.");
 }
-gradle = gradle.replace(/versionCode(?:\\s*=\\s*|\\s+)\\d+/, (match) =>
-  match.includes("=") ? `versionCode = ${versionCode}` : `versionCode ${versionCode}`,
+gradle = gradle.replace(/versionCode(?:\s*=\s*|\s+)\d+/, (match) =>
+  match.includes("=") ? "versionCode = " + versionCode : "versionCode " + versionCode,
 );
-gradle = gradle.replace(/versionName(?:\\s*=\\s*|\\s+)["'][^"']+["']/, (match) =>
-  match.includes("=") ? `versionName = "${appVersion}"` : `versionName "${appVersion}"`,
+gradle = gradle.replace(/versionName(?:\s*=\s*|\s+)["'][^"']+["']/, (match) =>
+  match.includes("=") ? 'versionName = "' + appVersion + '"' : 'versionName "' + appVersion + '"',
 );
 fs.writeFileSync(gradlePath, gradle);
-console.log(`Medical Centre Android version configured: ${appVersion} (versionCode ${versionCode})`);
+console.log("Medical Centre Android version configured: " + appVersion + " (versionCode " + versionCode + ")");
 
 console.log("Medical Centre Android permissions and icon prepared.");
