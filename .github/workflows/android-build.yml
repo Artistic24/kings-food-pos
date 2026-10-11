@@ -1,12 +1,17 @@
-name: Kings Food POS Android Release
+name: Medical Centre POS Android Release
 
 on:
   push:
-    branches: [main]
+    branches: [medical-health-center-v1.3.0]
+    tags: ["v*-medical*"]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: medical-centre-android-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-android-release:
@@ -51,7 +56,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Kings Food POS version: $VERSION"
+          echo "Medical Centre POS version: $VERSION"
 
       - name: Generate Capacitor Android project
         run: npm run android:add
@@ -65,69 +70,63 @@ jobs:
 
       - name: Create temporary release signing key
         env:
-          KEYSTORE_PASSWORD: kings-food-release-${{ github.run_id }}
-          KEY_PASSWORD: kings-food-release-${{ github.run_id }}
+          KEYSTORE_PASSWORD: medical-centre-release-${{ github.run_id }}
+          KEY_PASSWORD: medical-centre-release-${{ github.run_id }}
         run: |
           keytool -genkeypair -v \
-            -keystore "$RUNNER_TEMP/kings-food-release.jks" \
+            -keystore "$RUNNER_TEMP/medical-centre-release.jks" \
             -storepass "$KEYSTORE_PASSWORD" \
             -keypass "$KEY_PASSWORD" \
-            -alias kings-food-pos \
+            -alias medical-centre-pos \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -dname "CN=Kings Food POS, OU=Kings Food, O=Kings Food, L=Yaounde, ST=Centre, C=CM"
+            -dname "CN=Medical Centre POS, OU=Medical Centre, O=Medical Centre, L=Yaounde, ST=Centre, C=CM"
 
       - name: Sign release APK
         env:
-          KEYSTORE_PASSWORD: kings-food-release-${{ github.run_id }}
-          KEY_PASSWORD: kings-food-release-${{ github.run_id }}
+          KEYSTORE_PASSWORD: medical-centre-release-${{ github.run_id }}
+          KEY_PASSWORD: medical-centre-release-${{ github.run_id }}
         run: |
           UNSIGNED="android/app/build/outputs/apk/release/app-release-unsigned.apk"
           if [ ! -f "$UNSIGNED" ]; then
             UNSIGNED="android/app/build/outputs/apk/release/app-release.apk"
           fi
           test -f "$UNSIGNED"
-          ZIPALIGNED="$RUNNER_TEMP/Kings-Food-POS-${{ steps.version.outputs.version }}-aligned.apk"
+          ZIPALIGNED="$RUNNER_TEMP/Medical-Centre-POS-${{ steps.version.outputs.version }}-aligned.apk"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ZIPALIGNED"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
-            --ks "$RUNNER_TEMP/kings-food-release.jks" \
+            --ks "$RUNNER_TEMP/medical-centre-release.jks" \
             --ks-pass "pass:$KEYSTORE_PASSWORD" \
             --key-pass "pass:$KEY_PASSWORD" \
-            --ks-key-alias kings-food-pos \
-            --out "Kings-Food-POS-${{ steps.version.outputs.version }}.apk" \
+            --ks-key-alias medical-centre-pos \
+            --out "Medical-Centre-POS-${{ steps.version.outputs.version }}.apk" \
             "$ZIPALIGNED"
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            cp "Kings-Food-POS-${{ steps.version.outputs.version }}.apk" "Kings-Food-POS-${{ steps.version.outputs.version }}-Android-Printing.apk"
-          fi
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose \
-            "Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
+            "Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
 
       - name: Verify APK
         run: |
-          test -s "Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
-          ls -lh "Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
+          test -s "Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
+          ls -lh "Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Kings-Food-POS-${{ steps.version.outputs.version }}
-          path: Kings-Food-POS-${{ steps.version.outputs.version }}.apk
+          name: Medical-Centre-POS-${{ steps.version.outputs.version }}
+          path: Medical-Centre-POS-${{ steps.version.outputs.version }}.apk
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish APK release
+      - name: Publish APK to the versioned GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-medical')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="v${{ steps.version.outputs.version }}"
-          TITLE="Kings Food POS ${{ steps.version.outputs.version }}"
-          ASSET="Kings-Food-POS-${{ steps.version.outputs.version }}.apk"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ASSET"
-          elif gh release create "$TAG" "$ASSET" --title "$TITLE" --generate-notes; then
-            echo "Created release $TAG with the Android APK."
-          else
-            echo "Release $TAG appeared during publication; uploading the APK now."
-            gh release upload "$TAG" "$ASSET"
+          TAG="${GITHUB_REF#refs/tags/}"
+          TITLE="Medical Centre POS ${{ steps.version.outputs.version }}"
+          ASSET="Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "$TITLE" --notes "Medical Centre POS release. Android APK for medical-centre cashier, pharmacy and laboratory receipts."
           fi
+          gh release upload "$TAG" "$ASSET" --clobber
