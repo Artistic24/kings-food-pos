@@ -186,6 +186,7 @@ async function seed(db: IDBPDatabase<KingsDB>) {
     { id: "lab-glucose", name: "Glycémie rapide (One Touch)", categoryId: "c-laboratory", price: 1000, description: "Acte de laboratoire — prix d’exemple" },
     { id: "lab-kit", name: "Kit prélèvement", categoryId: "c-laboratory", price: 500, description: "Matériel de prélèvement — prix d’exemple" },
     { id: "pharm-amoxiclav", name: "Amoxiclav SP", categoryId: "c-pharmacy", price: 3500, description: "Article de pharmacie — prix d’exemple, à valider par l’établissement" },
+    { id: "pharm-betastene", name: "Betastene goutte", categoryId: "c-pharmacy", price: 4000, description: "Article de pharmacie — prix d’exemple, à valider par l’établissement" },
     { id: "care-kit", name: "Kit de soins", categoryId: "c-care", price: 500, description: "Article de soins — prix d’exemple" },
   ];
   const dishes: Dish[] = examples.map((item, index) => ({
