@@ -116,10 +116,17 @@ const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Delete (.+)\?$/, (m) => `Supprimer ${m[1]} ?`],
 ];
 
+const EN: Record<string, string> = Object.fromEntries(
+  Object.entries(FR).map(([english, french]) => [french, english]),
+);
+
 export function translate(text: string, lang: Lang): string {
-  if (lang === "en") return text;
   const trimmed = text.trim();
   if (!trimmed) return text;
+  if (lang === "en") {
+    const english = EN[trimmed];
+    return english ? text.replace(trimmed, english) : text;
+  }
   const hit = FR[trimmed] ?? PATTERNS.reduce<string | undefined>((acc, [re, fn]) => {
     if (acc) return acc;
     const m = trimmed.match(re);
