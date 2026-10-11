@@ -123,7 +123,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v${{ steps.version.outputs.version }}"
+          fi
           TITLE="Medical Centre POS ${{ steps.version.outputs.version }}"
           ASSET="Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
