@@ -18,10 +18,10 @@ import { printReceiptAndArchive } from "@/lib/desktop";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "POS — Kings Food" },
-      { name: "description", content: "Take dine-in or Yaoundé delivery orders, calculate totals, accept QR payments and print receipts." },
-      { property: "og:title", content: "POS — Kings Food" },
-      { property: "og:description", content: "Table or delivery orders, cart, QR payment and receipts — even offline." },
+      { title: "Caisse — Centre médical" },
+      { name: "description", content: "Register patients, laboratory acts and pharmacy articles, then print medical-centre receipts." },
+      { property: "og:title", content: "Caisse — Centre médical" },
+      { property: "og:description", content: "Offline-first medical cashier, pharmacy and laboratory receipt POS." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -38,13 +38,14 @@ function PosPage() {
   const [cat, setCat] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [mode, setMode] = useState<"table" | "delivery">("table");
-  const [table, setTable] = useState("");
-  const [customer, setCustomer] = useState("");
+    const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
-  const [reference, setReference] = useState("");
-  const [zone, setZone] = useState("");
-  const [pay, setPay] = useState("");
+  const [patientCode, setPatientCode] = useState("");
+  const [service, setService] = useState("LABORATOIRE");
+  const [practitioner, setPractitioner] = useState("");
+  const [receiptKind, setReceiptKind] = useState<"cashier" | "pharmacy">("cashier");
+  const [depositBalance, setDepositBalance] = useState("0");
+  const [reference, setReference] = useState("");  const [pay, setPay] = useState("");
   const [tendered, setTendered] = useState("");
   const [cardApproved, setCardApproved] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -53,9 +54,8 @@ function PosPage() {
 
   const methods = settings.payments.filter((p) => p.enabled);
   useEffect(() => {
-    if (!zone && settings.zones[0]) setZone(settings.zones[0].name);
     if (!methods.find((m) => m.id === pay) && methods[0]) setPay(methods[0].id);
-  }, [settings, zone, pay, methods]);
+  }, [settings, pay, methods]);
 
   const visible = useMemo(
     () =>
@@ -67,13 +67,13 @@ function PosPage() {
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const tax = Math.round((subtotal * (settings.taxRate || 0)) / 100);
-  const fee = mode === "delivery" ? (settings.zones.find((z) => z.name === zone)?.fee ?? 0) : 0;
+  const fee = 0;
   const discount = Math.round(subtotal * discountPercent / 100);
   const total = discountedTotal(subtotal, tax, fee, discountPercent);
   const count = cart.reduce((s, i) => s + i.qty, 0);
   const method = methods.find((m) => m.id === pay);
   const cashAmount = Number(tendered);
-  const cashReady = tendered !== "" && Number.isFinite(cashAmount) && cashAmount >= total;
+  const cashReady = tendered !== "" && Number.isFinite(cashAmount) && cashAmount >= 0;
   const paymentReady = pay === "cash" ? cashReady : pay === "card" ? cardApproved : Boolean(method);
   const pressTenderKey = (key: string) => {
     if (key === "C") setTendered("");
@@ -96,16 +96,22 @@ function PosPage() {
 
   const place = useMutation({
     mutationFn: async () => {
+      const amountPaid = pay === "cash"
+        ? Math.min(Math.max(0, cashAmount), total)
+        : pay === "card" && cardApproved ? total : 0;
       const order: Order = {
         id: uid(),
         ref: makeRef(),
         reference: reference.trim() || undefined,
-        mode,
-        table: mode === "table" ? table.trim() : undefined,
-        customer: mode === "delivery" ? customer.trim() : undefined,
-        phone: mode === "delivery" ? phone.trim() : undefined,
-        zone: mode === "delivery" ? zone : undefined,
-        deliveryFee: fee,
+        patientCode: patientCode.trim() || undefined,
+        service: service.trim() || (receiptKind === "pharmacy" ? "PHARMACIE" : "LABORATOIRE"),
+        practitioner: practitioner.trim() || undefined,
+        receiptKind,
+        mode: "medical",
+        customer: customer.trim(),
+        phone: phone.trim() || undefined,
+        depositBalance: Math.max(0, Number(depositBalance) || 0),
+        deliveryFee: 0,
         items: cart,
         subtotal,
         discountPercent,
@@ -113,8 +119,9 @@ function PosPage() {
         tax,
         total,
         paymentMethod: pay,
-        paid: pay === "cash" || pay === "card",
-        ...(pay === "cash" ? { tendered: cashAmount } : {}),
+        amountPaid,
+        paid: amountPaid >= total,
+        ...(pay === "cash" && tendered !== "" ? { tendered: Math.max(0, cashAmount) } : {}),
         status: "new",
         createdAt: Date.now(),
       };
@@ -125,15 +132,18 @@ function PosPage() {
       qc.invalidateQueries({ queryKey: ["orders"] });
       setCart([]);
       setCartOpen(false);
-      setTable("");
       setCustomer("");
       setPhone("");
+      setPatientCode("");
+      setService(receiptKind === "pharmacy" ? "PHARMACIE" : "LABORATOIRE");
+      setPractitioner("");
+      setDepositBalance("0");
       setReference("");
       setTendered("");
       setCardApproved(false);
       setDiscountPercent(0);
       setReceipt(order);
-      toast.success("Order sent to the kitchen");
+      toast.success("Medical receipt registered");
     },
   });
 
@@ -154,13 +164,12 @@ function PosPage() {
     }
   };
 
-  const canSubmit =
-    cart.length > 0 && paymentReady && (mode === "table" ? table.trim().length > 0 : customer.trim().length > 0 && phone.trim().length > 0);
+  const canSubmit = cart.length > 0 && paymentReady && customer.trim().length > 0;
 
   const cartPanel = (
     <div className="space-y-4">
       {cart.length === 0 ? (
-        <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">Cart is empty. Tap a dish to add it.</p>
+        <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No items yet. Tap a laboratory act or pharmacy article to add it.</p>
       ) : (
         <ul className="divide-y divide-border">
           {cart.map((i) => (
@@ -183,60 +192,43 @@ function PosPage() {
         </ul>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
-        {(["table", "delivery"] as const).map((m) => (
-          <Button
-            key={m}
-            variant={mode === m ? "default" : "secondary"}
-            onClick={() => setMode(m)}
-            className="rounded-md text-sm font-semibold"
-          >
-            {m === "table" ? "Dine-in" : "Delivery"}
-          </Button>
-        ))}
+      <div className="space-y-1.5">
+        <Label>Receipt format</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" variant={receiptKind === "cashier" ? "default" : "outline"} onClick={() => { setReceiptKind("cashier"); setService("LABORATOIRE"); }} className="rounded-md text-sm">Reçu de caisse</Button>
+          <Button type="button" variant={receiptKind === "pharmacy" ? "default" : "outline"} onClick={() => { setReceiptKind("pharmacy"); setService("PHARMACIE"); }} className="rounded-md text-sm">Reçu de pharmacie</Button>
+        </div>
       </div>
 
-      {mode === "table" ? (
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="table">Table number</Label>
-          <select id="table" value={table} onChange={(e) => setTable(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-            <option value="">Select a table</option>
-            {Array.from({ length: settings.tables }, (_, i) => String(i + 1)).map((t) => (
-              <option key={t} value={t}>Table {t}</option>
-            ))}
-          </select>
+          <Label htmlFor="patient-name">Nom du patient</Label>
+          <Input id="patient-name" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Nom complet du patient" />
         </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="client">Customer name</Label>
-            <Input id="client" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Customer name" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tel">Phone</Label>
-            <Input id="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="6XX XX XX XX" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="zone">Delivery zone (Yaoundé)</Label>
-            <select id="zone" value={zone} onChange={(e) => setZone(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-              {settings.zones.map((z) => (
-                <option key={z.name} value={z.name}>{z.name} — {fcfa(z.fee)}</option>
-              ))}
-            </select>
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="patient-code">Code Patient</Label>
+          <Input id="patient-code" value={patientCode} onChange={(e) => setPatientCode(e.target.value)} placeholder="Ex. 26PA00302" />
         </div>
-      )}
-
-      <div className="space-y-1.5">
-        <Label htmlFor="reference">Reference / important note</Label>
-        <Input
-          id="reference"
-          value={reference}
-          onChange={(e) => setReference(e.target.value)}
-          placeholder="Optional: order note, customer request, etc."
-          maxLength={120}
-        />
-        <p className="text-[11px] text-muted-foreground">Saved with this receipt and printed on the POS receipt.</p>
+        <div className="space-y-1.5">
+          <Label htmlFor="patient-phone">Téléphone du patient</Label>
+          <Input id="patient-phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Facultatif" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="medical-service">Service</Label>
+          <Input id="medical-service" value={service} onChange={(e) => setService(e.target.value)} placeholder="LABORATOIRE / PHARMACIE" />
+        </div>
+        {receiptKind === "cashier" && <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="practitioner">Traitant / médecin</Label>
+          <Input id="practitioner" value={practitioner} onChange={(e) => setPractitioner(e.target.value)} placeholder="Nom du médecin ou du responsable" />
+        </div>}
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="reference">Référence / note facultative</Label>
+          <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Note liée au reçu" maxLength={120} />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="deposit-balance">Solde caution (FCFA)</Label>
+          <Input id="deposit-balance" type="number" min="0" step="1" value={depositBalance} onChange={(e) => setDepositBalance(e.target.value)} />
+        </div>
       </div>
 
       <div className="space-y-1.5">
@@ -261,7 +253,6 @@ function PosPage() {
         <Line label="Subtotal" value={fcfa(subtotal)} />
         {discount > 0 && <Line label={`Discount (${discountPercent}%)`} value={`−${fcfa(discount)}`} />}
         {tax > 0 && <Line label={`Tax (${settings.taxRate}%)`} value={fcfa(tax)} />}
-        {mode === "delivery" && <Line label="Delivery" value={fcfa(fee)} />}
         <div className="flex justify-between border-t border-border pt-1 font-display text-base font-bold">
           <span>Total</span>
           <span className="text-primary">{fcfa(total)}</span>
@@ -280,10 +271,10 @@ function PosPage() {
       {pay === "cash" && cart.length > 0 && (
         <div className="space-y-3" aria-label="Cash payment">
           <div className="rounded-md bg-accent p-4">
-            <Label htmlFor="tendered">Cash tendered (FCFA)</Label>
+            <Label htmlFor="tendered">Montant versé maintenant (FCFA)</Label>
             <Input id="tendered" type="number" min="0" step="1" inputMode="numeric" value={tendered} onChange={(e) => setTendered(e.target.value)} placeholder={String(total)} className="mt-2 bg-card font-display text-xl font-bold" />
-            <p className="mt-2 text-sm text-muted-foreground">Change <span className="font-bold text-foreground">{fcfa(cashChange(total, cashAmount))}</span></p>
-            {tendered !== "" && !cashReady && <p className="mt-1 text-xs text-destructive">Tendered amount must cover the total.</p>}
+            <p className="mt-2 text-sm text-muted-foreground">Rendu <span className="font-bold text-foreground">{fcfa(cashChange(total, cashAmount))}</span><span className="ml-3">Reste <b>{fcfa(Math.max(0, total - Math.min(Math.max(0, cashAmount), total)))}</b></span></p>
+            {tendered !== "" && (!Number.isFinite(cashAmount) || cashAmount < 0) && <p className="mt-1 text-xs text-destructive">Enter a valid amount.</p>}
           </div>
           <div className="grid grid-cols-4 gap-2">
             {[total, ...[5000, 10000, 20000].filter((amount) => amount >= total)].slice(0, 4).map((amount, i) => (
@@ -314,7 +305,7 @@ function PosPage() {
           <Trash2 className="size-4" /> Clear
         </Button>
         <Button className="flex-1 rounded-full" disabled={!canSubmit || place.isPending} onClick={() => place.mutate()}>
-          <Check className="size-4" /> {pay === "cash" || pay === "card" ? "Confirm paid order" : "Confirm order"}
+          <Check className="size-4" /> {pay === "cash" ? "Enregistrer le reçu / paiement" : pay === "card" ? "Confirmer le paiement par carte" : "Enregistrer le reçu"}
         </Button>
       </div>
     </div>
@@ -326,12 +317,12 @@ function PosPage() {
         <div>
           <p className="text-sm text-muted-foreground">{settings.tagline}</p>
           <h1 className="font-display text-2xl font-extrabold md:text-3xl">
-            New order, <span className="text-gradient">served hot.</span>
+            Nouveau reçu, <span className="text-gradient">centre médical.</span>
           </h1>
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search dishes" className="rounded-full pl-9" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un acte ou un article" className="rounded-full pl-9" />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[{ id: "all", name: "All" }, ...categories].map((c) => (
@@ -346,7 +337,7 @@ function PosPage() {
         </div>
 
         {visible.length === 0 ? (
-          <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No dishes here. Add some from the Menu tab.</p>
+          <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">Aucun article ici. Ajoutez des actes ou articles dans Articles & actes.</p>
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {visible.map((d) => (
@@ -378,7 +369,7 @@ function PosPage() {
 
       <aside className="hidden lg:block">
         <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-3xl bg-card p-5 shadow-soft">
-          <h2 className="mb-3 font-display text-lg font-bold">Current order</h2>
+          <h2 className="mb-3 font-display text-lg font-bold">Articles du reçu</h2>
           {cartPanel}
         </div>
       </aside>
@@ -389,7 +380,7 @@ function PosPage() {
           className="fixed inset-x-0 bottom-20 z-40 mx-auto flex w-[calc(100%-2rem)] max-w-xl items-center justify-between rounded-full bg-brand px-5 py-3 text-primary-foreground shadow-float md:bottom-6 lg:hidden no-print"
         >
           <span className="flex items-center gap-2 text-sm font-semibold">
-            <ShoppingBag className="size-4" /> {count} item{count > 1 ? "s" : ""}
+            <ShoppingBag className="size-4" /> {count} ligne{count > 1 ? "s" : ""}
           </span>
           <span className="font-display font-bold">{fcfa(total)}</span>
         </button>
