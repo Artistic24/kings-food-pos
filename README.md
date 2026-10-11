@@ -1,51 +1,37 @@
-# Kings Food POS
+# Medical Centre POS
 
-Kings Food POS is an offline-first restaurant point-of-sale application designed for Android devices, modern browsers, and Windows desktop computers.
+A dedicated, offline-first point-of-sale edition for medical centres, with separate receipt layouts for the cashier/laboratory and pharmacy.
 
-## Offline by design
+## Receipt layouts
 
-- Orders, menu items, categories, settings and sales history are stored locally on the device with IndexedDB.
-- The application does not require a cloud database, login service or internet connection for normal POS operation.
-- The PWA service worker precaches the application so the installed browser/PWA version continues to open without internet.
-- Payment QR images are stored locally in the device database.
-- Receipts are generated locally and can be printed through the device/browser print system.
+- **Reçu de Caisse:** patient name and code, service, treating practitioner, ACTE/Red/PU/QTE/TOTAL item table, total, payment, change, amount remaining, patient debt, deposit balance, date/time and optional cashier name.
+- **Reçu de Pharmacie:** patient name and code, ARTICLE/Red/PU/QTE/TOTAL item table and the same payment and balance totals.
+- The facility name, address, phone, optional logo, receipt footer and cashier name are editable from Settings.
+- Supports partial cash payments and records the remaining amount due.
+- Android printing uses the system print preview. Windows printing uses the selected installed printer. Desktop-printed receipts are archived to Excel.
 
-## Windows desktop app
+## First launch
 
-The Windows version is packaged with Electron. Electron serves the compiled POS from a local loopback server, so the same client-side IndexedDB data model and offline behavior are preserved without requiring an internet connection.
+The catalogue is preloaded with example laboratory acts and pharmacy/care items based on the supplied receipt photographs. **Prices are examples only:** review and adjust the catalogue from **Articles & actes** before using the system for real transactions. Enter the centre's full legal name, address, phone and logo in **Settings**.
 
-### Build locally on Windows
+## Build on Windows
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 npm run build:win
 ```
 
-The installer is written to the `release/` directory.
-
-### GitHub Actions
-
-Every push to `main` also builds the Windows installer on a Windows GitHub Actions runner and uploads the `.exe` as a workflow artifact.
-
-## Kings Food branding
-
-The application is fully Kings Food branded and has no external editor, telemetry, cloud database, or vendor runtime dependency.
-
-## Development
+## Build Android
 
 ```bash
-npm install
-npm run dev
-npm run build
-npm run test
+npm install --legacy-peer-deps
+npm run android:add
+npm run android:sync
+npm run build:android:release
 ```
 
-For the desktop shell:
+The GitHub Actions workflows publish the Android APK and Windows installer to the versioned GitHub Release for tags matching `v*-medical*`.
 
-```bash
-npm run electron:dev
-```
+## Data and privacy
 
-## Local data
-
-The database is named `kings-food` and is versioned in `src/lib/db.ts`. Clearing the application's site/app data will remove the local POS database, so use the application's future backup/export feature before resetting a production device.
+Patient and transaction records are stored locally in the app's dedicated IndexedDB database `medical-centre-pos`. The medical edition uses a separate Android application ID and Windows app identity from Kings Food restaurant POS. Back up the device regularly and follow your centre's policies for patient data access and retention.
