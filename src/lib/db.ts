@@ -1,9 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
-import poulet from "@/assets/dish-poulet.jpg";
-import poisson from "@/assets/dish-poisson.jpg";
-import soda from "@/assets/drink-soda.jpg";
-import { ADDITIONAL_DISHES, CAMEROON_DRINKS } from "./menu-seeds";
 
 export type Category = { id: string; name: string; createdAt: number };
 
@@ -31,7 +27,13 @@ export type Order = {
   id: string;
   ref: string;
   reference?: string;
-  mode: "table" | "delivery";
+  patientCode?: string;
+  service?: string;
+  practitioner?: string;
+  receiptKind?: "cashier" | "pharmacy";
+  amountPaid?: number;
+  depositBalance?: number;
+  mode: "table" | "delivery" | "medical";
   table?: string | undefined;
   customer?: string | undefined;
   phone?: string | undefined;
@@ -88,16 +90,17 @@ export type Settings = {
   payments: PaymentMethod[];
   printerName?: string;
   receiptLogo?: string;
+  cashierName?: string;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   id: "main",
-  businessName: "Kings Food",
-  tagline: "The Royal Taste",
+  businessName: "CENTRE MEDICAL",
+  tagline: "Reçus de caisse, laboratoire et pharmacie",
   address: "Yaoundé, Cameroon",
   phone: "",
   taxRate: 0,
-  receiptFooter: "Thank you, see you soon!",
+  receiptFooter: "Merci pour votre confiance.",
   tables: 20,
   zones: [
     { name: "City Centre", fee: 500 },
@@ -113,6 +116,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   printerName: "",
   receiptLogo: "",
+  cashierName: "",
   payments: [
     { id: "cash", name: "Cash", account: "", holder: "", instructions: "Pay at the counter.", enabled: true },
     { id: "card", name: "Bank card", account: "", holder: "", instructions: "Charge with your card terminal, then confirm here.", enabled: true },
@@ -135,54 +139,26 @@ export const hasIDB = () => typeof indexedDB !== "undefined";
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<KingsDB>("kings-food", 7, {
-      upgrade(db, oldVersion, _newVersion, transaction) {
-        if (oldVersion < 2 && !db.objectStoreNames.contains("settings")) {
+    dbPromise = openDB<KingsDB>("medical-centre-pos", 7, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains("settings")) {
           db.createObjectStore("settings", { keyPath: "id" });
         }
-        if (oldVersion < 1) {
+        if (!db.objectStoreNames.contains("categories")) {
           db.createObjectStore("categories", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("dishes")) {
           const dishes = db.createObjectStore("dishes", { keyPath: "id" });
           dishes.createIndex("byCategory", "categoryId");
+        }
+        if (!db.objectStoreNames.contains("orders")) {
           const orders = db.createObjectStore("orders", { keyPath: "id" });
           orders.createIndex("byCreatedAt", "createdAt");
         }
-        if (oldVersion >= 1 && oldVersion < 3) {
-          const categories = transaction.objectStore("categories");
-          const dishes = transaction.objectStore("dishes");
-          for (const dish of ADDITIONAL_DISHES) {
-            const request = categories.get(dish.categoryId);
-            request.then((category) => {
-              if (category) void dishes.add({ ...dish, createdAt: Date.now() + dish.createdAt });
-            });
-          }
+        if (!db.objectStoreNames.contains("spendings")) {
+          const spendings = db.createObjectStore("spendings", { keyPath: "id" });
+          spendings.createIndex("byCreatedAt", "createdAt");
         }
-        if (oldVersion >= 2 && oldVersion < 4) {
-          const settings = transaction.objectStore("settings");
-          const card = DEFAULT_SETTINGS.payments.find((payment) => payment.id === "card");
-          void settings.get("main").then((current) => {
-            if (card && current && !current.payments.some((payment) => payment.id === "card")) {
-              void settings.put({ ...current, payments: [...current.payments, card] });
-            }
-          });
-        }
-        if (oldVersion < 6) {
-          if (!db.objectStoreNames.contains("spendings")) {
-            const spendings = db.createObjectStore("spendings", { keyPath: "id" });
-            spendings.createIndex("byCreatedAt", "createdAt");
-          }
-          const categories = transaction.objectStore("categories");
-          categories.put({ id: "c-cakes", name: "Cakes", createdAt: Date.now() + 3 });
-        }
-        if (oldVersion >= 1 && oldVersion < 5) {
-          const categories = transaction.objectStore("categories");
-          const dishes = transaction.objectStore("dishes");
-          void categories.get("c-boissons").then((category) => {
-            if (!category) return;
-            for (const d of CAMEROON_DRINKS) void dishes.put({ ...d, createdAt: Date.now() + d.createdAt });
-          });
-        }
-      },
     }).then(async (db) => {
       const count = await db.count("categories");
       if (count === 0) await seed(db);
@@ -197,47 +173,29 @@ export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().to
 async function seed(db: IDBPDatabase<KingsDB>) {
   const now = Date.now();
   const cats: Category[] = [
-    { id: "c-plats", name: "Main Dishes", createdAt: now },
-    { id: "c-grillades", name: "Grills", createdAt: now + 1 },
-    { id: "c-boissons", name: "Drinks", createdAt: now + 2 },
-    { id: "c-cakes", name: "Cakes", createdAt: now + 3 },
+    { id: "c-laboratory", name: "Laboratoire", createdAt: now },
+    { id: "c-pharmacy", name: "Pharmacie", createdAt: now + 1 },
+    { id: "c-care", name: "Soins & prélèvements", createdAt: now + 2 },
+    { id: "c-consultation", name: "Consultations", createdAt: now + 3 },
   ];
-  const dishes: Dish[] = [
-    {
-      id: uid(),
-      name: "Chicken DG",
-      categoryId: "c-plats",
-      price: 3500,
-      description: "Braised chicken with ripe plantains and sautéed vegetables.",
-      photo: poulet,
-      available: true,
-      createdAt: now,
-    },
-    {
-      id: uid(),
-      name: "Grilled Fish",
-      categoryId: "c-grillades",
-      price: 4000,
-      description: "Grilled tilapia, pepper sauce and plantains.",
-      photo: poisson,
-      available: true,
-      createdAt: now + 1,
-    },
-    {
-      id: uid(),
-      name: "Soda 33cl",
-      categoryId: "c-boissons",
-      price: 700,
-      description: "Ice-cold soft drink.",
-      photo: soda,
-      available: true,
-      createdAt: now + 2,
-    },
+  const examples: Array<Pick<Dish, "id" | "name" | "categoryId" | "price" | "description">> = [
+    { id: "lab-nfs", name: "NFS", categoryId: "c-laboratory", price: 4500, description: "Acte de laboratoire — prix d’exemple" },
+    { id: "lab-crp", name: "CRP", categoryId: "c-laboratory", price: 2000, description: "Acte de laboratoire — prix d’exemple" },
+    { id: "lab-tdr", name: "TDR", categoryId: "c-laboratory", price: 500, description: "Test de diagnostic rapide — prix d’exemple" },
+    { id: "lab-glucose", name: "Glycémie rapide (One Touch)", categoryId: "c-laboratory", price: 1000, description: "Acte de laboratoire — prix d’exemple" },
+    { id: "lab-kit", name: "Kit prélèvement", categoryId: "c-laboratory", price: 500, description: "Matériel de prélèvement — prix d’exemple" },
+    { id: "pharm-amoxiclav", name: "Amoxiclav SP", categoryId: "c-pharmacy", price: 3500, description: "Article de pharmacie — prix d’exemple, à valider par l’établissement" },
+    { id: "care-kit", name: "Kit de soins", categoryId: "c-care", price: 500, description: "Article de soins — prix d’exemple" },
   ];
+  const dishes: Dish[] = examples.map((item, index) => ({
+    ...item,
+    available: true,
+    createdAt: now + index,
+  }));
   const tx = db.transaction(["categories", "dishes"], "readwrite");
   await Promise.all([
-    ...cats.map((c) => tx.objectStore("categories").put(c)),
-    ...[...dishes, ...[...ADDITIONAL_DISHES, ...CAMEROON_DRINKS].map((d) => ({ ...d, createdAt: now + d.createdAt }))].map((d) => tx.objectStore("dishes").put(d)),
+    ...cats.map((category) => tx.objectStore("categories").put(category)),
+    ...dishes.map((dish) => tx.objectStore("dishes").put(dish)),
   ]);
   await tx.done;
 }
