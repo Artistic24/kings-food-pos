@@ -48,7 +48,7 @@ if (fs.existsSync(iconSource)) {
   fs.mkdirSync(iconDir, { recursive: true });
   fs.copyFileSync(iconSource, iconTarget);
 } else {
-  throw new Error("Kings Food icon source is missing: public/icons/icon-512.png");
+  throw new Error("Medical Centre icon source is missing: public/icons/icon-512.png");
 }
 
 const pluginPath = path.join(
@@ -128,8 +128,8 @@ public class KingsFoodPrinterPlugin extends Plugin {
                     .build();
 
                 PrintJob job = printManager.print(
-                    call.getString("jobName", "Kings Food POS Receipt"),
-                    getBridge().getWebView().createPrintDocumentAdapter("Kings Food POS"),
+                    call.getString("jobName", "Medical Centre POS Receipt"),
+                    getBridge().getWebView().createPrintDocumentAdapter("Medical Centre POS"),
                     attributes
                 );
 
@@ -196,7 +196,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
 
         try {
             byte[] data = Base64.getDecoder().decode(base64);
-            String relative = "Download/Kings Food POS/Receipts/" + year + "/" + month + "/";
+            String relative = "Download/Medical Centre POS/Receipts/" + year + "/" + month + "/";
             String savedPath;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -225,7 +225,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
             } else {
                 File root = new File(
                     getContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
-                    "Kings Food POS/Receipts/" + year + "/" + month
+                    "Medical Centre POS/Receipts/" + year + "/" + month
                 );
                 if (!root.exists() && !root.mkdirs()) throw new Exception("Could not create receipt directory");
                 File file = new File(root, fileName);
@@ -319,4 +319,4 @@ public class MainActivity extends BridgeActivity {
 fs.mkdirSync(path.dirname(activityPath), { recursive: true });
 fs.writeFileSync(activityPath, java);
 
-console.log("Kings Food Android permissions and icon prepared.");
+console.log("Medical Centre Android permissions and icon prepared.");
