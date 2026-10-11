@@ -7,9 +7,7 @@ const activityPath = path.join(
   androidRoot,
   "app/src/main/java/com/kingshealth/medicalpos/MainActivity.java",
 );
-const iconSource = path.resolve("public/icons/icon-512.png");
 const iconDir = path.join(androidRoot, "app/src/main/res/drawable");
-const iconTarget = path.join(iconDir, "kings_food_icon.png");
 
 if (!fs.existsSync(manifestPath)) {
   throw new Error("Android project is missing. Run: npm run android:add");
@@ -40,16 +38,22 @@ for (const permission of permissions) {
 }
 manifest = manifest.replace(
   /android:icon="[^"]+"/,
-  'android:icon="@drawable/kings_food_icon"',
+  'android:icon="@drawable/medical_centre_icon"',
 );
 fs.writeFileSync(manifestPath, manifest);
 
-if (fs.existsSync(iconSource)) {
-  fs.mkdirSync(iconDir, { recursive: true });
-  fs.copyFileSync(iconSource, iconTarget);
-} else {
-  throw new Error("Medical Centre icon source is missing: public/icons/icon-512.png");
-}
+const medicalIcon = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#0F766E" android:pathData="M0,0h48v48H0z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M20,8h8v12h12v8H28v12h-8V28H8v-8h12z" />
+</vector>
+`;
+fs.mkdirSync(iconDir, { recursive: true });
+fs.writeFileSync(path.join(iconDir, "medical_centre_icon.xml"), medicalIcon);
 
 const pluginPath = path.join(
   androidRoot,
