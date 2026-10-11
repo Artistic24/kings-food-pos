@@ -5,6 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { archivePrintedReceipt, archivePrintedSpending, openReceiptsFolder } = require("./receipts.cjs");
 
+app.setName("Medical Centre POS");
+
 const PORT = 0;
 const DIST_DIR = path.join(__dirname, "..", "dist");
 
@@ -49,7 +51,7 @@ function startStaticServer() {
         });
         fs.createReadStream(filePath).pipe(res);
       } catch (error) {
-        console.error("Kings Food local server error:", error);
+        console.error("Medical Centre local server error:", error);
         res.writeHead(500);
         res.end("Internal server error");
       }
@@ -83,7 +85,7 @@ function registerIpcHandlers() {
         });
       }
     } catch (error) {
-      console.warn("Kings Food Electron printer enumeration failed:", error);
+      console.warn("Medical Centre Electron printer enumeration failed:", error);
     }
 
     if (process.platform === "win32") {
@@ -125,7 +127,7 @@ function registerIpcHandlers() {
           });
         }
       } catch (error) {
-        console.warn("Kings Food Windows printer fallback failed:", error);
+        console.warn("Medical Centre Windows printer fallback failed:", error);
       }
     }
 
@@ -195,7 +197,7 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   return createWindow();
 }).catch((error) => {
-  console.error("Kings Food POS failed to start:", error);
+  console.error("Medical Centre POS failed to start:", error);
   app.quit();
 });
 
