@@ -41,7 +41,7 @@ function PosPage() {
     const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [patientCode, setPatientCode] = useState("");
-  const [service, setService] = useState("LABORATOIRE");
+  const [service, setService] = useState("All");
   const [practitioner, setPractitioner] = useState("");
   const [receiptKind, setReceiptKind] = useState<"cashier" | "pharmacy">("cashier");
   const [depositBalance, setDepositBalance] = useState("0");
@@ -109,7 +109,7 @@ function PosPage() {
         ref: makeRef(),
         reference: reference.trim() || undefined,
         patientCode: patientCode.trim() || undefined,
-        service: service.trim() || (receiptKind === "pharmacy" ? "PHARMACIE" : "LABORATOIRE"),
+        service: service.trim() || "All",
         practitioner: practitioner.trim() || undefined,
         receiptKind,
         mode: "medical",
@@ -140,7 +140,7 @@ function PosPage() {
       setCustomer("");
       setPhone("");
       setPatientCode("");
-      setService(receiptKind === "pharmacy" ? "PHARMACIE" : "LABORATOIRE");
+      setService("All");
       setPractitioner("");
       setDepositBalance("0");
       setReference("");
@@ -200,8 +200,8 @@ function PosPage() {
       <div className="space-y-1.5">
         <Label>Receipt format</Label>
         <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant={receiptKind === "cashier" ? "default" : "outline"} onClick={() => { setReceiptKind("cashier"); setService("LABORATOIRE"); }} className="rounded-md text-sm">Reçu de caisse</Button>
-          <Button type="button" variant={receiptKind === "pharmacy" ? "default" : "outline"} onClick={() => { setReceiptKind("pharmacy"); setService("PHARMACIE"); }} className="rounded-md text-sm">Reçu de pharmacie</Button>
+          <Button type="button" variant={receiptKind === "cashier" ? "default" : "outline"} onClick={() => { setReceiptKind("cashier"); }} className="rounded-md text-sm">Reçu de caisse</Button>
+          <Button type="button" variant={receiptKind === "pharmacy" ? "default" : "outline"} onClick={() => { setReceiptKind("pharmacy"); }} className="rounded-md text-sm">Reçu de pharmacie</Button>
         </div>
       </div>
 
@@ -220,7 +220,7 @@ function PosPage() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="medical-service">Service</Label>
-          <Input id="medical-service" value={service} onChange={(e) => setService(e.target.value)} placeholder="LABORATOIRE / PHARMACIE" />
+          <select id="medical-service" value={service} onChange={(e) => setService(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="All">All</option><option value="Laboratoire">Laboratoire</option><option value="Echographie">Echographie</option><option value="Consultation">Consultation</option><option value="Maternité">Maternité</option><option value="Radiologie">Radiologie</option><option value="Théâtre">Théâtre</option></select>
         </div>
         {receiptKind === "cashier" && <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="practitioner">Traitant / médecin</Label>
@@ -345,19 +345,19 @@ function PosPage() {
         {visible.length === 0 ? (
           <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">Aucun article ici. Ajoutez des actes ou articles dans Articles & actes.</p>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 xl:grid-cols-6">
             {visible.map((d) => (
               <li key={d.id}>
-                <button onClick={() => add(d.id, d.name, d.price)} className="block w-full overflow-hidden rounded-2xl bg-card text-left shadow-soft transition hover:-translate-y-0.5">
+                <button onClick={() => add(d.id, d.name, d.price)} className="block w-full overflow-hidden rounded-lg bg-card text-left shadow-soft transition hover:-translate-y-0.5">
                   {d.photo ? (
-                    <img src={d.photo} alt={d.name} loading="lazy" className="h-28 w-full object-cover md:h-36" />
+                    <img src={d.photo} alt={d.name} loading="lazy" className="h-14 w-full object-cover md:h-18" />
                   ) : (
-                    <div className="flex h-28 items-center justify-center bg-accent font-display text-2xl font-bold text-accent-foreground md:h-36">
+                    <div className="flex h-14 items-center justify-center bg-accent font-display text-base font-bold text-accent-foreground md:h-18">
                       {d.name.slice(0, 2).toUpperCase()}
                     </div>
                   )}
-                  <div className="space-y-1 p-3">
-                    <p className="font-display text-sm font-bold">{d.name}</p>
+                  <div className="space-y-0.5 p-1.5">
+                    <p className="font-display text-xs font-semibold leading-tight">{d.name}</p>
                     <p className="line-clamp-2 text-[11px] text-muted-foreground">{d.description}</p>
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-sm font-bold text-primary">{fcfa(d.price)}</span>
