@@ -77,8 +77,13 @@ function SalesPage(){
  </div>
 }
 function RevenueChart({title,data}:{title:string;data:{label:string;value:number}[]}){
- const max=Math.max(...data.map(x=>x.value),1),w=520,h=190,p=28;
- const points=data.map((x,i)=>`${p+i*((w-2*p)/Math.max(1,data.length-1))},${h-p-(x.value/max)*(h-2*p)}`).join(" ");
- return <section className="rounded-2xl bg-card p-4 shadow-soft"><div className="flex items-center justify-between"><h2 className="font-display text-sm font-bold">{title}</h2><span className="text-xs text-muted-foreground">{fcfa(data.reduce((s,x)=>s+x.value,0))}</span></div><div className="mt-3 overflow-x-auto"><svg viewBox={`0 0 ${w} ${h}`} className="h-48 min-w-[520px] w-full" role="img" aria-label={title}><line x1={p} y1={h-p} x2={w-p} y2={h-p} stroke="currentColor" opacity=".15"/><polyline fill="none" stroke="currentColor" strokeWidth="3" points={points}/>{data.map((x,i)=>{const cx=p+i*((w-2*p)/Math.max(1,data.length-1));const cy=h-p-(x.value/max)*(h-2*p);return <g key={x.label+i}><circle cx={cx} cy={cy} r="4" fill="currentColor"/><text x={cx} y={h-7} textAnchor="middle" fontSize="10" fill="currentColor" opacity=".65">{x.label}</text></g>})}</svg></div></section>
+ const max=Math.max(...data.map(x=>x.value),1),w=560,h=220,left=34,right=12,top=16,bottom=38,plotH=h-top-bottom;
+ const slot=(w-left-right)/data.length,barW=Math.min(30,slot*0.62);
+ const palette=["#2563eb","#0d9488","#7c3aed","#ea580c","#db2777","#0891b2","#65a30d","#9333ea"];
+ const ticks=[0,0.25,0.5,0.75,1];
+ return <section className="rounded-2xl bg-card p-4 shadow-soft"><div className="flex items-center justify-between gap-2"><h2 className="font-display text-sm font-bold">{title}</h2><span className="text-xs text-muted-foreground">{fcfa(data.reduce((s,x)=>s+x.value,0))}</span></div><div className="mt-3 overflow-x-auto"><svg viewBox={`0 0 ${w} ${h}`} className="h-52 min-w-[520px] w-full" role="img" aria-label={title}>
+ {ticks.map(t=><g key={t}><line x1={left} y1={top+plotH*(1-t)} x2={w-right} y2={top+plotH*(1-t)} stroke="currentColor" opacity=".12"/><text x={left-6} y={top+plotH*(1-t)+3} textAnchor="end" fontSize="9" fill="currentColor" opacity=".65">{Math.round(max*t).toLocaleString()}</text></g>)}
+ {data.map((x,i)=>{const bh=(x.value/max)*plotH,cx=left+slot*i+slot/2,yy=top+plotH-bh;return <g key={x.label+i}><rect x={cx-barW/2} y={yy} width={barW} height={Math.max(2,bh)} rx="4" fill={palette[i%palette.length]}/><text x={cx} y={Math.max(top+10,yy-5)} textAnchor="middle" fontSize="9" fill="currentColor">{x.value?fcfa(x.value).replace(" FCFA",""): "0"}</text><text x={cx} y={h-12} textAnchor="middle" fontSize="10" fill="currentColor" opacity=".75">{x.label}</text></g>})}
+ </svg></div></section>
 }
 function Stat({label,value,highlight}:{label:string;value:string;highlight?:boolean}){return <div className={`rounded-2xl p-4 shadow-soft ${highlight?"bg-brand text-primary-foreground":"bg-card"}`}><p className={`text-[11px] ${highlight?"opacity-85":"text-muted-foreground"}`}>{label}</p><p className="font-display text-lg font-extrabold">{value}</p></div>}
