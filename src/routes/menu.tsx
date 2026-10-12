@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { deleteCategory, deleteDish, listCategories, listDishes, saveCategory, saveDish, uid, type Dish } from "@/lib/db";
@@ -33,8 +33,15 @@ function MenuPage() {
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: listCategories });
   const { data: dishes = [] } = useQuery({ queryKey: ["dishes"], queryFn: listDishes });
   const [newCat, setNewCat] = useState("");
+  const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const refresh = () => qc.invalidateQueries();
+  const query = search.trim().toLocaleLowerCase();
+  const filteredDishes = dishes.filter((d) => {
+    if (!query) return true;
+    const category = categories.find((c) => c.id === d.categoryId)?.name ?? "";
+    return [d.name, d.description, category, String(d.price)].some((v) => String(v ?? "").toLocaleLowerCase().includes(query));
+  });
 
   const openNew = () =>
     setDraft({ id: uid(), name: "", categoryId: categories[0]?.id ?? "", price: 0, description: "", available: true, createdAt: Date.now() });
@@ -89,14 +96,19 @@ function MenuPage() {
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-display text-lg font-bold">Actes et articles enregistrés</h2>
           <Button className="rounded-full" onClick={openNew} disabled={!categories.length}>
             <Plus className="size-4" /> Nouvel article / acte
           </Button>
         </div>
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {dishes.map((d) => (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un article, un acte, une catégorie ou un prix…" className="rounded-full pl-9" aria-label="Rechercher dans les articles et actes" />
+        </div>
+        <p className="text-xs text-muted-foreground">{filteredDishes.length} résultat{filteredDishes.length === 1 ? "" : "s"}</p>
+        {filteredDishes.length === 0 ? <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">Aucun article ou acte correspondant.</p> : <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {filteredDishes.map((d) => (
             <li key={d.id} className="flex gap-3 rounded-2xl bg-card p-3 shadow-soft">
               {d.photo ? (
                 <img src={d.photo} alt={d.name} className="size-16 rounded-xl object-cover" />
@@ -128,7 +140,7 @@ function MenuPage() {
               </div>
             </li>
           ))}
-        </ul>
+        </ul>}
       </section>
 
       <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>
