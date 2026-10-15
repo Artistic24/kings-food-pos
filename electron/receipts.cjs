@@ -86,58 +86,42 @@ function formatMoney(sheet, keys) {
   }
 }
 
-async function archivePrintedReceipt({ order, settings }) {
-  if (!order || !order.ref || !Array.isArray(order.items)) {
-    throw new Error("Invalid receipt data.");
+function safeFilePart(value, fallback) {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64) || fallback;
+}
+
+async function writeWorkbookAtomically(workbook, filePath) {
+  const tempPath = filePath + ".tmp-" + process.pid + "-" + Date.now();
+  try {
+    await workbook.xlsx.writeFile(tempPath);
+    // On Windows rename cannot replace an existing target, so remove it only after
+    // the new workbook is fully written to disk.
+    await fs.promises.rm(filePath, { force: true });
+    await fs.promises.rename(tempPath, filePath);
+  } catch (error) {
+    await fs.promises.rm(tempPath, { force: true }).catch(() => {});
+    throw error;
   }
+}
 
-  const { date, yyyy, mm, dd } = dateParts(order.createdAt);
-  const root = path.join(require("electron").app.getPath("documents"), "Medical Centre POS", "Receipts", yyyy, mm);
-  await fs.promises.mkdir(root, { recursive: true });
-
-  const filePath = path.join(root, `Medical-Centre-Receipts-${yyyy}-${mm}-${dd}.xlsx`);
-  // Also create a standalone workbook for this patient/receipt, while retaining the daily archive.
-  const safePart = (value, fallback) => String(value || fallback)
-    .normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 64) || fallback;
-  const patientFile = path.join(root, `${safePart(order.customer, "Patient")}_${safePart(order.ref, "Receipt")}.xlsx`);
-  const tempPath = filePath + ".tmp";
-
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Medical Centre POS";
-  workbook.created = new Date();
-  workbook.modified = new Date();
-  workbook.properties.title = `Medical Centre receipts — ${yyyy}-${mm}-${dd}`;
-  workbook.properties.subject = "Automatically archived printed receipts";
-
-  if (fs.existsSync(filePath)) {
-    await workbook.xlsx.readFile(filePath);
-  }
-
-  const receipts = workbook.getWorksheet("Receipts") || createReceiptsSheet(workbook);
-  const items = workbook.getWorksheet("Items") || createItemsSheet(workbook);
-  ensureReferenceColumn(receipts, "Reference", "reference", 32);
-
-  const alreadyArchived = receipts.getColumn(1).values.some((value) => String(value || "") === order.ref);
-  if (alreadyArchived) {
-    return {
-      success: true,
-      alreadyArchived: true,
-      filePath,
-      relativePath: path.relative(require("electron").app.getPath("documents"), filePath),
-    };
-  }
-
-  const printedAt = new Date();
-
+function addReceiptRows(receipts, items, order, settings, date) {
   const method = Array.isArray(settings?.payments)
     ? settings.payments.find((payment) => payment.id === order.paymentMethod)
     : undefined;
-
-  const tendered = Number.isFinite(order.tendered) ? order.tendered : null;
-  const amountPaid = Math.min(Math.max(0, Number(order.amountPaid ?? (order.paid ? order.total : 0))), Number(order.total || 0));
-  const remaining = Math.max(0, Number(order.total || 0) - amountPaid);
-  const change = tendered == null ? 0 : Math.max(0, tendered - order.total);
+  const total = Number(order.total || 0);
+  const tendered = Number.isFinite(Number(order.tendered)) && order.tendered !== null && order.tendered !== ""
+    ? Number(order.tendered)
+    : null;
+  const amountPaid = Math.min(Math.max(0, Number(order.amountPaid ?? (order.paid ? total : 0))), total);
+  const remaining = Math.max(0, total - amountPaid);
+  const change = tendered == null ? 0 : Math.max(0, tendered - total);
+  const printedAt = new Date();
 
   const row = receipts.addRow({
     ref: textValue(order.ref),
@@ -157,17 +141,16 @@ async function archivePrintedReceipt({ order, settings }) {
     discount: Number(order.discount || 0),
     tax: Number(order.tax || 0),
     delivery: Number(order.deliveryFee || 0),
-    total: Number(order.total || 0),
+    total,
     amountPaid,
     remaining,
     depositBalance: Number(order.depositBalance || 0),
     tendered,
     change,
-    paid: amountPaid >= Number(order.total || 0) ? "Yes" : "No",
+    paid: amountPaid >= total ? "Yes" : "No",
     status: textValue(order.status),
     printedAt,
   });
-
   row.getCell("createdAt").numFmt = "dd/mm/yyyy hh:mm";
   row.getCell("printedAt").numFmt = "dd/mm/yyyy hh:mm";
   row.getCell("ref").alignment = { vertical: "top" };
@@ -184,41 +167,122 @@ async function archivePrintedReceipt({ order, settings }) {
 
   formatMoney(receipts, ["subtotal", "discount", "tax", "delivery", "total", "amountPaid", "remaining", "depositBalance", "tendered", "change"]);
   formatMoney(items, ["unitPrice", "lineTotal"]);
+}
 
+function createSingleReceiptWorkbook(order, settings, date) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Medical Centre POS";
+  workbook.created = new Date();
+  workbook.modified = new Date();
+  workbook.properties.title = "Receipt " + order.ref + " — " + (order.customer || "Patient");
+  workbook.properties.subject = "Patient receipt";
+
+  const receipts = createReceiptsSheet(workbook);
+  const items = createItemsSheet(workbook);
+  ensureReferenceColumn(receipts, "Reference", "reference", 32);
+  addReceiptRows(receipts, items, order, settings, date);
+  return workbook;
+}
+
+async function archivePrintedReceipt({ order, settings }) {
+  if (!order || !order.ref || !Array.isArray(order.items)) {
+    throw new Error("Invalid receipt data.");
+  }
+
+  const { date, yyyy, mm, dd } = dateParts(order.createdAt || Date.now());
+  const documents = require("electron").app.getPath("documents");
+  const root = path.join(documents, "Medical Centre POS", "Receipts", yyyy, mm);
+  await fs.promises.mkdir(root, { recursive: true });
+
+  const dailyPath = path.join(root, "Medical-Centre-Receipts-" + yyyy + "-" + mm + "-" + dd + ".xlsx");
+  const patientFile = path.join(root, safeFilePart(order.customer, "Patient") + "_" + safeFilePart(order.ref, "Receipt") + ".xlsx");
+  let alreadyArchived = false;
+  let dailyError = null;
+
+  // Keep the daily workbook, but never let a locked/corrupt daily archive prevent
+  // the patient-specific workbook from being saved.
   try {
-    await workbook.xlsx.writeFile(tempPath);
+    const dailyWorkbook = new ExcelJS.Workbook();
+    dailyWorkbook.creator = "Medical Centre POS";
+    dailyWorkbook.created = new Date();
+    dailyWorkbook.modified = new Date();
+    dailyWorkbook.properties.title = "Medical Centre receipts — " + yyyy + "-" + mm + "-" + dd;
+    dailyWorkbook.properties.subject = "Automatically archived printed receipts";
+
+    if (fs.existsSync(dailyPath)) await dailyWorkbook.xlsx.readFile(dailyPath);
+    const receipts = dailyWorkbook.getWorksheet("Receipts") || createReceiptsSheet(dailyWorkbook);
+    const items = dailyWorkbook.getWorksheet("Items") || createItemsSheet(dailyWorkbook);
+    ensureReferenceColumn(receipts, "Reference", "reference", 32);
+
+    alreadyArchived = receipts.getColumn(1).values.some((value) => String(value || "") === String(order.ref));
+    if (!alreadyArchived) {
+      addReceiptRows(receipts, items, order, settings, date);
+      await writeWorkbookAtomically(dailyWorkbook, dailyPath);
+    }
+  } catch (error) {
+    dailyError = error instanceof Error ? error.message : String(error);
+  }
+
+  // Always create a standalone patient/receipt workbook. This repairs older runs
+  // where the daily workbook had the reference but the patient copy did not.
+  const patientWorkbook = createSingleReceiptWorkbook(order, settings, date);
+  try {
+    await writeWorkbookAtomically(patientWorkbook, patientFile);
+  } catch (error) {
+    const fallbackPath = path.join(root, "Medical-Centre-Receipt-" + safeFilePart(order.ref, "Receipt") + ".xlsx");
+    try {
+      await writeWorkbookAtomically(patientWorkbook, fallbackPath);
+      return {
+        success: true,
+        alreadyArchived,
+        fallback: true,
+        filePath: fallbackPath,
+        dailyArchivePath: dailyError ? undefined : dailyPath,
+        relativePath: path.relative(documents, fallbackPath),
+        warning: "Could not replace the patient-named workbook; saved a receipt-specific copy instead." + (dailyError ? " Daily archive issue: " + dailyError : ""),
+        originalError: error instanceof Error ? error.message : String(error),
+      };
+    } catch (fallbackError) {
+      throw new Error("Could not save the patient receipt workbook: " + (fallbackError instanceof Error ? fallbackError.message : String(fallbackError)));
+    }
+  }
+
+  return {
+    success: true,
+    alreadyArchived,
+    fallback: Boolean(dailyError),
+    filePath: patientFile,
+    dailyArchivePath: dailyError ? undefined : dailyPath,
+    relativePath: path.relative(documents, patientFile),
+    warning: dailyError ? "Patient Excel receipt saved, but the daily archive could not be updated: " + dailyError : undefined,
+  };
+}
+
+async function savePrintedReceiptPdf({ order, pdfBuffer }) {
+  if (!order || !order.ref || !pdfBuffer) {
+    throw new Error("Invalid receipt PDF data.");
+  }
+  const { yyyy, mm } = dateParts(order.createdAt || Date.now());
+  const documents = require("electron").app.getPath("documents");
+  const root = path.join(documents, "Medical Centre POS", "Receipts", yyyy, mm);
+  await fs.promises.mkdir(root, { recursive: true });
+
+  const filePath = path.join(root, safeFilePart(order.customer, "Patient") + "_" + safeFilePart(order.ref, "Receipt") + ".pdf");
+  const tempPath = filePath + ".tmp-" + process.pid + "-" + Date.now();
+  try {
+    await fs.promises.writeFile(tempPath, pdfBuffer);
     await fs.promises.rm(filePath, { force: true });
     await fs.promises.rename(tempPath, filePath);
-
-    // Keep a patient-named copy of the full receipt archive workbook for easy retrieval.
-    const patientTemp = patientFile + ".tmp";
-    await workbook.xlsx.writeFile(patientTemp);
-    await fs.promises.rm(patientFile, { force: true });
-    await fs.promises.rename(patientTemp, patientFile);
-
-    return {
-      success: true,
-      alreadyArchived: false,
-      filePath: patientFile,
-      dailyArchivePath: filePath,
-      relativePath: path.relative(require("electron").app.getPath("documents"), patientFile),
-    };
   } catch (error) {
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
-
-    const fallbackPath = path.join(root, `Medical-Centre-Receipt-${textValue(order.ref).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`);
-    await workbook.xlsx.writeFile(fallbackPath);
-
-    return {
-      success: true,
-      alreadyArchived: false,
-      fallback: true,
-      filePath: fallbackPath,
-      relativePath: path.relative(require("electron").app.getPath("documents"), fallbackPath),
-      warning: "The daily Excel workbook was locked, so this receipt was saved to its own Excel file instead.",
-      originalError: error instanceof Error ? error.message : String(error),
-    };
+    throw error;
   }
+
+  return {
+    success: true,
+    filePath,
+    relativePath: path.relative(documents, filePath),
+  };
 }
 
 async function openReceiptsFolder() {
@@ -321,4 +385,4 @@ async function archivePrintedSpending({ spending, settings }) {
   }
 }
 
-module.exports = { archivePrintedReceipt, archivePrintedSpending, openReceiptsFolder };
+module.exports = { archivePrintedReceipt, savePrintedReceiptPdf, archivePrintedSpending, openReceiptsFolder };
