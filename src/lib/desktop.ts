@@ -27,11 +27,19 @@ export type ArchiveResult = {
 
 export type SpendingArchiveResult = ArchiveResult;
 
+export type PdfArchiveResult = {
+  success: boolean;
+  filePath?: string;
+  relativePath?: string;
+  error?: string;
+};
+
 export type KingsFoodDesktopBridge = {
   isDesktop: true;
   getPrinters: () => Promise<DesktopPrinter[]>;
   printReceipt: (options?: { printerName?: string }) => Promise<PrintResult>;
   archiveReceipt: (payload: { order: unknown; settings: unknown }) => Promise<ArchiveResult>;
+  saveReceiptPdf: (payload: { order: unknown }) => Promise<PdfArchiveResult>;
   archiveSpending: (payload: { spending: unknown; settings: unknown }) => Promise<ArchiveResult>;
   openReceiptsFolder: () => Promise<{ success: boolean; path?: string }>;
 };
@@ -174,7 +182,7 @@ export async function getDesktopPrinters(): Promise<DesktopPrinter[]> {
 export async function printReceiptAndArchive(
   order: unknown,
   settings: { printerName?: string },
-): Promise<{ printed: boolean; archived: boolean; fallback: boolean; message?: string }> {
+): Promise<{ printed: boolean; archived: boolean; pdfSaved?: boolean; fallback: boolean; message?: string }> {
   if (isAndroidApp()) {
     const printed = await AndroidPrinter.printCurrentPage({ jobName: "Medical Centre POS Receipt" });
     if (!printed.success) {
@@ -217,13 +225,23 @@ export async function printReceiptAndArchive(
   }
 
   const archived = await desktop.archiveReceipt({ order, settings });
+  const pdf = await desktop.saveReceiptPdf({ order });
+  const message = archived.success && pdf.success
+    ? archived.warning
+      ? "Receipt saved as patient Excel and PDF, but the daily Excel archive could not be updated."
+      : "Receipt printed; Excel and PDF saved."
+    : archived.success
+      ? "Receipt printed and saved to Excel, but PDF export failed."
+      : pdf.success
+        ? "Receipt printed and saved to PDF, but Excel archiving failed."
+        : "Receipt printed, but Excel and PDF saving failed.";
+
   return {
     printed: true,
     archived: archived.success,
-    fallback: Boolean(archived.fallback),
-    message: archived.success
-      ? archived.warning || `Printed successfully and saved to Excel: ${archived.relativePath || "Receipts folder"}`
-      : "Printed successfully, but the Excel receipt archive could not be updated.",
+    pdfSaved: pdf.success,
+    fallback: Boolean(archived.fallback) || !pdf.success,
+    message,
   };
 }
 
