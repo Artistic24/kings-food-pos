@@ -218,8 +218,6 @@ export const FR: Record<string, string> = {
   "Printed by:": "Imprimé par :",
   "MEDICAL CENTRE": "CENTRE MEDICAL",
   "LABORATORY": "LABORATOIRE",
-  "Reçu de Caisse": "Reçu de Caisse",
-  "Reçu de Pharmacie": "Reçu de Pharmacie",
 };
 
 const EN_ALIASES: Record<string, string> = {
@@ -301,28 +299,7 @@ const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Delete (.+)\?$/, (m) => `Supprimer ${m[1]} ?`],
 ];
 
-const EN_ALIASES: Record<string, string> = {
-  "Réduction": "Discount",
-  "Réduction (5%)": "Discount (5%)",
-  "Réduction (10%)": "Discount (10%)",
-  "Réduction (15%)": "Discount (15%)",
-  "Réduction (20%)": "Discount (20%)",
-  "Reçu de Caisse": "Cash receipt",
-  "Reçu de Pharmacie": "Pharmacy receipt",
-  "CENTRE MEDICAL": "MEDICAL CENTRE",
-  "LABORATOIRE": "LABORATORY",
-  "Imprimé par :": "Printed by:",
-  "Tél. :": "Phone:",
-  "Sous-total": "Subtotal",
-  "Montant Total": "Total amount",
-  "Montant versé": "Amount received",
-  "Montant rendu": "Change given",
-  "Dette du patient": "Patient debt",
-  "Solde Caution": "Deposit balance",
-  "ACTE": "Act",
-  "ARTICLE": "Item",
-  "Réduc.": "Disc.",
-};
+
 
 const EN_PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Réduction \((.+)\)$/, (m) => "Discount (" + m[1] + ")"],
