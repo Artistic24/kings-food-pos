@@ -45,9 +45,9 @@ export function Receipt({ order, settings }: { order: Order; settings: Settings 
         <thead>
           <tr className="border-b border-foreground/70 font-bold">
             <th className="w-[36%] py-1 pr-1">{pharmacy ? "ARTICLE" : "ACTE"}</th>
-            <th className="w-[12%] px-0.5 text-right">Red</th>
-            <th className="w-[17%] px-0.5 text-right">PU</th>
-            <th className="w-[10%] px-0.5 text-right">QTE</th>
+            <th className="w-[12%] px-0.5 text-right">Discount</th>
+            <th className="w-[17%] px-0.5 text-right">Unit</th>
+            <th className="w-[10%] px-0.5 text-right">Qty</th>
             <th className="w-[25%] py-1 pl-0.5 text-right">TOTAL</th>
           </tr>
         </thead>
