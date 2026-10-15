@@ -114,7 +114,7 @@ jobs:
             --ks "$RUNNER_TEMP/medical-centre-release.jks" \
             --ks-pass "pass:$KEYSTORE_PASSWORD" \
             --key-pass "pass:$KEY_PASSWORD" \
-            --ks-key-alias medical-centre-pos \
+            --ks-key-alias "$KEY_ALIAS" \
             --out "Medical-Centre-POS-${{ steps.version.outputs.version }}.apk" \
             "$ZIPALIGNED"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose \
@@ -132,6 +132,11 @@ jobs:
           path: Medical-Centre-POS-${{ steps.version.outputs.version }}.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Keep existing APK asset until stable signing is configured
+        if: env.MEDICAL_POS_STABLE_SIGNING != 'true'
+        run: |
+          echo "::notice::The APK was built and uploaded as a workflow artifact, but the existing release APK was preserved. Configure MEDICAL_POS_KEYSTORE_BASE64, MEDICAL_POS_KEYSTORE_PASSWORD, MEDICAL_POS_KEY_ALIAS, and MEDICAL_POS_KEY_PASSWORD repository secrets before publishing so installed Android apps can be updated without a signature mismatch."
 
       - name: Publish APK to the versioned GitHub Release
         if: env.MEDICAL_POS_STABLE_SIGNING == 'true' && ((startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-medical')) || github.ref == 'refs/heads/release/medical-centre-v1.3.0')
