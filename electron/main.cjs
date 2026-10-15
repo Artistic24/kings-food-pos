@@ -3,7 +3,7 @@ const { execFile } = require("node:child_process");
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
-const { archivePrintedReceipt, archivePrintedSpending, openReceiptsFolder } = require("./receipts.cjs");
+const { archivePrintedReceipt, savePrintedReceiptPdf, archivePrintedSpending, openReceiptsFolder } = require("./receipts.cjs");
 
 app.setName("Medical Centre POS");
 
@@ -159,6 +159,22 @@ function registerIpcHandlers() {
 
   ipcMain.handle("kings-food:archive-receipt", async (_event, payload) => {
     return await archivePrintedReceipt(payload);
+  });
+
+  ipcMain.handle("kings-food:save-receipt-pdf", async (event, payload = {}) => {
+    try {
+      // Uses the same rendered receipt and print stylesheet as the physical print flow.
+      const pdfBuffer = await event.sender.printToPDF({
+        printBackground: true,
+        preferCSSPageSize: true,
+      });
+      return await savePrintedReceiptPdf({ order: payload.order, pdfBuffer });
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   });
 
   ipcMain.handle("kings-food:archive-spending", async (_event, payload) => {
