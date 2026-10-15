@@ -12,6 +12,9 @@ describe("offline English/French translations", () => {
     );
     expect(translate("Echographie", "en")).toBe("Ultrasound");
     expect(translate("Maternité", "en")).toBe("Maternity");
+    expect(translate("Article / acte", "en")).toBe("Item / act");
+    expect(translate("Articles & actes", "en")).toBe("Items & acts");
+    expect(translate("Encaissements par mode de paiement", "en")).toBe("Revenue by payment method");
   });
 
   it("translates receipt, printer, and settings labels into French", () => {
