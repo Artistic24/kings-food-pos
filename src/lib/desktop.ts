@@ -1,6 +1,8 @@
 import { Capacitor } from "@capacitor/core";
 import ExcelJS from "exceljs";
 import { AndroidPrinter } from "@/lib/androidPrinter";
+import type { Order, Settings } from "@/lib/db";
+import { generateReceiptPdfBase64 } from "@/lib/receiptPdf";
 
 export type DesktopPrinter = {
   name: string;
@@ -189,7 +191,7 @@ export async function getDesktopPrinters(): Promise<DesktopPrinter[]> {
 
 export async function printReceiptAndArchive(
   order: unknown,
-  settings: { printerName?: string },
+  settings: Partial<Settings>,
 ): Promise<{ printed: boolean; archived: boolean; pdfSaved?: boolean; fallback: boolean; message?: string }> {
   if (isAndroidApp()) {
     const sale = order as { customer?: string; ref?: string; createdAt?: number };
@@ -208,10 +210,10 @@ export async function printReceiptAndArchive(
     let pdfPath = "";
     try {
       const pdf = await AndroidPrinter.saveReceiptPdf({
+        base64: generateReceiptPdfBase64(order as Order, settings),
         fileName: safePatient + "_" + receiptRef + ".pdf",
         year: String(date.getFullYear()),
         month: String(date.getMonth() + 1).padStart(2, "0"),
-        jobName,
       });
       pdfSaved = Boolean(pdf.success);
       pdfPath = pdf.path || safePatient + "_" + receiptRef + ".pdf";
