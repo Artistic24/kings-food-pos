@@ -50,6 +50,10 @@ jobs:
           node --check electron/preload.cjs
           node --check electron/receipts.cjs
 
+      - name: Run automated regression tests
+        shell: pwsh
+        run: npm test
+
       - name: Setup Python for icon generation
         uses: actions/setup-python@v5
         with:
