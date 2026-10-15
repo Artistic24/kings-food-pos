@@ -297,6 +297,24 @@ async function openReceiptsFolder() {
 
 function ensureReferenceColumn(sheet, header, key, width) {
   if (sheet.columns.some((column) => column.key === key)) return;
+
+  // Excel files do not persist ExcelJS column keys. Reuse a matching existing
+  // header (including "Reference / Note") instead of appending duplicate columns.
+  const normalizedHeader = String(header).trim().toLowerCase();
+  for (let index = 1; index <= sheet.columnCount; index += 1) {
+    const actualHeader = String(sheet.getRow(1).getCell(index).value ?? "").trim().toLowerCase();
+    if (
+      actualHeader === normalizedHeader ||
+      actualHeader.startsWith(normalizedHeader + " /") ||
+      actualHeader.startsWith(normalizedHeader + " (")
+    ) {
+      const existingColumn = sheet.getColumn(index);
+      existingColumn.key = key;
+      if (!existingColumn.width) existingColumn.width = width;
+      return;
+    }
+  }
+
   const column = sheet.getColumn(sheet.columnCount + 1);
   column.header = header;
   column.key = key;
