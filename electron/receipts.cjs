@@ -96,6 +96,11 @@ async function archivePrintedReceipt({ order, settings }) {
   await fs.promises.mkdir(root, { recursive: true });
 
   const filePath = path.join(root, `Medical-Centre-Receipts-${yyyy}-${mm}-${dd}.xlsx`);
+  // Also create a standalone workbook for this patient/receipt, while retaining the daily archive.
+  const safePart = (value, fallback) => String(value || fallback)
+    .normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 64) || fallback;
+  const patientFile = path.join(root, `${safePart(order.customer, "Patient")}_${safePart(order.ref, "Receipt")}.xlsx`);
   const tempPath = filePath + ".tmp";
 
   const workbook = new ExcelJS.Workbook();
@@ -185,11 +190,18 @@ async function archivePrintedReceipt({ order, settings }) {
     await fs.promises.rm(filePath, { force: true });
     await fs.promises.rename(tempPath, filePath);
 
+    // Keep a patient-named copy of the full receipt archive workbook for easy retrieval.
+    const patientTemp = patientFile + ".tmp";
+    await workbook.xlsx.writeFile(patientTemp);
+    await fs.promises.rm(patientFile, { force: true });
+    await fs.promises.rename(patientTemp, patientFile);
+
     return {
       success: true,
       alreadyArchived: false,
-      filePath,
-      relativePath: path.relative(require("electron").app.getPath("documents"), filePath),
+      filePath: patientFile,
+      dailyArchivePath: filePath,
+      relativePath: path.relative(require("electron").app.getPath("documents"), patientFile),
     };
   } catch (error) {
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
