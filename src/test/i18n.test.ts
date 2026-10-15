@@ -16,4 +16,11 @@ describe("offline English/French translations", () => {
     expect(translate("Réduction (5%)", "en")).toBe("Discount (5%)");
     expect(translate("N° : MC-123", "en")).toBe("No.: MC-123");
   });
+  it("keeps French labels French while supporting English reverse lookup", () => {
+    expect(translate("Nom complet du patient", "fr")).toBe("Nom complet du patient");
+    expect(translate("Nom complet du patient", "en")).toBe("Patient full name");
+    expect(translate("Rechercher dans les articles et actes", "fr")).toBe("Rechercher dans les articles et actes");
+    expect(translate("Rechercher dans les articles et actes", "en")).toBe("Search articles and acts");
+  });
+
 });
