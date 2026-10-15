@@ -280,10 +280,10 @@ const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
 ];
 
 const EN_PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
-  [/^Réduction \\((.+)\\)$/, (m) => "Discount (" + m[1] + ")"],
-  [/^N°\\s*:\\s*(.*)$/, (m) => "No.: " + m[1]],
-  [/^Imprimé par\\s*:\\s*(.*)$/, (m) => "Printed by: " + m[1]],
-  [/^Tél\\.\\s*:\\s*(.*)$/, (m) => "Phone: " + m[1]],
+  [/^Réduction \((.+)\)$/, (m) => "Discount (" + m[1] + ")"],
+  [/^N°\s*:\s*(.*)$/, (m) => "No.: " + m[1]],
+  [/^Imprimé par\s*:\s*(.*)$/, (m) => "Printed by: " + m[1]],
+  [/^Tél\.\s*:\s*(.*)$/, (m) => "Phone: " + m[1]],
 ];
 
 const EN: Record<string, string> = Object.fromEntries(
