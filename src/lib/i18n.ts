@@ -182,6 +182,13 @@ export const FR: Record<string, string> = {
   "Excel file saved": "Fichier Excel enregistré",
 };
 
+  "Receipt printed; Excel and PDF saved.": "Reçu imprimé ; fichiers Excel et PDF enregistrés.",
+  "Receipt saved as patient Excel and PDF, but the daily Excel archive could not be updated.": "Reçu patient enregistré en Excel et PDF, mais l'archive Excel quotidienne n'a pas pu être mise à jour.",
+  "Receipt printed and saved to Excel, but PDF export failed.": "Reçu imprimé et enregistré dans Excel, mais l'export PDF a échoué.",
+  "Receipt printed and saved to PDF, but Excel archiving failed.": "Reçu imprimé et enregistré en PDF, mais l'archivage Excel a échoué.",
+  "Receipt printed, but Excel and PDF saving failed.": "Reçu imprimé, mais l'enregistrement Excel et PDF a échoué.",
+  "Receipt printed, but receipt archiving was incomplete.": "Reçu imprimé, mais l'archivage du reçu est incomplet.",
+
 const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Table (.+)$/, (m) => `Table ${m[1]}`],
   [/^Delivery · (.+)$/, (m) => `Livraison · ${m[1]}`],
