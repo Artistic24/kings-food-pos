@@ -187,8 +187,6 @@ export const FR: Record<string, string> = {
   "Act": "ACTE",
   "Item": "ARTICLE",
   "Disc.": "Réduc.",
-  "Subtotal": "Sous-total",
-  "Discount": "Réduction",
   "Tax": "Taxes",
   "Total amount": "Montant Total",
   "Amount received": "Montant versé",
