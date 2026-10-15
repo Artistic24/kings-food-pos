@@ -45,8 +45,8 @@ function SalesPage(){
    if (!open) return;
    try {
      const result = await printReceiptAndArchive(open, settings);
-     if (result.printed && result.archived) toast.success("Reçu imprimé et archivé dans Excel");
-     else if (result.printed) toast.warning("Reçu imprimé, mais l’archivage Excel a échoué");
+     if (result.printed && result.archived && result.pdfSaved !== false) toast.success(result.message || "Receipt printed; Excel and PDF saved.");
+     else if (result.printed) toast.warning(result.message || "Receipt printed, but receipt archiving was incomplete.");
      else if (result.fallback) toast.info(result.message || "Browser print dialog opened");
    } catch (error) {
      console.error("Receipt print/archive failed:", error);
