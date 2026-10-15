@@ -199,6 +199,7 @@ export const FR: Record<string, string> = {
   "Unit": "PU",
   "Qty": "QTE",
   "Search acts, items, categories or prices": "Rechercher des actes, articles, catégories ou prix",
+  "No.:": "N° :",
   "Patient full name": "Nom complet du patient",
   "No.": "N°",
   "Patient code:": "Code Patient :",
