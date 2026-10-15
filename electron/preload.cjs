@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld("kingsFoodDesktop", {
   archiveReceipt: (payload) =>
     ipcRenderer.invoke("kings-food:archive-receipt", payload),
 
+  saveReceiptPdf: (payload) =>
+    ipcRenderer.invoke("kings-food:save-receipt-pdf", payload),
+
   archiveSpending: (payload) =>
     ipcRenderer.invoke("kings-food:archive-spending", payload),
 
