@@ -160,7 +160,15 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
   const buffer = await workbook.xlsx.writeBuffer();
   const safeRef = ref.replace(/[^a-zA-Z0-9_-]/g, "_");
   const prefix = kind === "sale" ? "Medical-Centre-Receipt" : "Medical-Centre-Spending";
-  const fileName = prefix + "-" + safeRef + "-" + year + month + day + ".xlsx";
+  const safePatient = String(data.customer || "Patient")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64) || "Patient";
+  const fileName = kind === "sale"
+    ? safePatient + "_" + safeRef + "_" + year + month + day + ".xlsx"
+    : prefix + "-" + safeRef + "-" + year + month + day + ".xlsx";
 
   const saved = await AndroidPrinter.saveExcel({
     base64: bufferToBase64(buffer),
