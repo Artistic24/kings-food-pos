@@ -1,25 +1,3 @@
-import { useSyncExternalStore } from "react";
-
-export type Lang = "en" | "fr";
-const KEY = "kf-lang";
-const listeners = new Set<() => void>();
-
-export const getLang = (): Lang =>
-  typeof localStorage !== "undefined" && localStorage.getItem(KEY) === "fr" ? "fr" : "en";
-
-export function setLang(lang: Lang) {
-  localStorage.setItem(KEY, lang);
-  listeners.forEach((l) => l());
-}
-
-export const useLang = () =>
-  useSyncExternalStore(
-    (cb) => (listeners.add(cb), () => listeners.delete(cb)),
-    getLang,
-    () => "en" as Lang,
-  );
-
-// English source text -> French. The UI is written in English and translated on display.
 export const FR: Record<string, string> = {
   POS: "Caisse", Kitchen: "Cuisine", Menu: "Menu", Sales: "Ventes", Settings: "Paramètres",
   "Install app": "Installer l'appli", Language: "Langue", English: "Anglais", French: "Français",
@@ -180,14 +158,70 @@ export const FR: Record<string, string> = {
   "Receipt saved": "Reçu enregistré",
   "PDF saved": "PDF enregistré",
   "Excel file saved": "Fichier Excel enregistré",
-};
-
-  "Receipt printed; Excel and PDF saved.": "Reçu imprimé ; fichiers Excel et PDF enregistrés.",
+"Receipt printed; Excel and PDF saved.": "Reçu imprimé ; fichiers Excel et PDF enregistrés.",
   "Receipt saved as patient Excel and PDF, but the daily Excel archive could not be updated.": "Reçu patient enregistré en Excel et PDF, mais l'archive Excel quotidienne n'a pas pu être mise à jour.",
   "Receipt printed and saved to Excel, but PDF export failed.": "Reçu imprimé et enregistré dans Excel, mais l'export PDF a échoué.",
   "Receipt printed and saved to PDF, but Excel archiving failed.": "Reçu imprimé et enregistré en PDF, mais l'archivage Excel a échoué.",
   "Receipt printed, but Excel and PDF saving failed.": "Reçu imprimé, mais l'enregistrement Excel et PDF a échoué.",
   "Receipt printed, but receipt archiving was incomplete.": "Reçu imprimé, mais l'archivage du reçu est incomplet.",
+  "Receipt format": "Format du reçu",
+  "Android printer": "Imprimante Android",
+  "Windows printer settings": "Paramètres de l’imprimante Windows",
+  "Windows default printer": "Imprimante Windows par défaut",
+  "Open Excel receipts folder": "Ouvrir le dossier des reçus Excel",
+  "Receipt archive": "Archive des reçus",
+  "Open archive": "Ouvrir l’archive",
+  "Optional details": "Détails facultatifs",
+  "Optional reference / important note": "Référence / note importante facultative",
+  "e.g. Buy new bulbs": "Ex. : acheter de nouvelles ampoules",
+  "Service": "Service",
+  "Unit": "PU",
+  "Qty": "Qté",
+};
+
+const EN_ALIASES: Record<string, string> = {
+  "Code Patient": "Patient code",
+  "Code Patient :": "Patient code:",
+  "Service :": "Medical service:",
+  "Traitant :": "Practitioner:",
+  "Tél. patient :": "Patient phone:",
+  "Rendu": "Change",
+  "Reste": "Remaining",
+  "Echographie": "Ultrasound",
+  "Maternité": "Maternity",
+  "Radiologie": "Radiology",
+  "Théâtre": "Operating theatre",
+  "Actes et articles enregistrés": "Saved acts and items",
+  "Actes et articles les plus utilisés aujourd’hui": "Most-used acts and items today",
+  "Aucun encaissement aujourd’hui.": "No payments today.",
+  "Aucun encaissement pour le moment.": "No payments recorded yet.",
+  "Aucun reçu correspondant.": "No matching receipts.",
+  "Aucun reçu enregistré.": "No receipts recorded.",
+  "Choisissez la langue de l’application.": "Choose the app language.",
+  "Enregistrer et imprimer": "Save and print",
+  "Enregistrer les paramètres": "Save settings",
+  "Établissement": "Facility",
+  "Logo du centre (facultatif)": "Centre logo (optional)",
+  "Logo facultatif": "Optional logo",
+  "Logo du centre": "Centre logo",
+  "Téléversez le logo de l’établissement à afficher sur les reçus, si nécessaire.": "Upload the facility logo to show on receipts, if needed.",
+  "Modes de paiement et QR codes": "Payment methods & QR codes",
+  "Nom complet du patient": "Patient full name",
+  "Ex. 26PA00302": "e.g. 26PA00302",
+  "Nom du médecin ou du responsable": "Doctor or practitioner name",
+  "Note liée au reçu": "Receipt note",
+  "Nouvel article / acte": "New item / act",
+  "Nom de l’article / acte": "Item / act name",
+  "Rechercher dans les articles et actes": "Search articles and acts",
+  "Rechercher par patient, code patient ou reçu": "Search by patient, patient code or receipt",
+  "Historique des dépenses": "Spending history",
+  "Historique des reçus": "Receipt history",
+  "Suivi des reçus": "Receipt tracking",
+  "Suivi des encaissements": "Payment tracking",
+  "Paiement partiel : le reste sera indiqué sur le reçu.": "Partial payment: the remaining balance will be shown on the receipt.",
+  "PU": "Unit",
+  "QTE": "Qty",
+};
 
 const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Table (.+)$/, (m) => `Table ${m[1]}`],
@@ -209,7 +243,7 @@ export function translate(text: string, lang: Lang): string {
   const trimmed = text.trim();
   if (!trimmed) return text;
   if (lang === "en") {
-    const english = EN[trimmed];
+    const english = EN[trimmed] ?? EN_ALIASES[trimmed];
     return english ? text.replace(trimmed, english) : text;
   }
   const hit = FR[trimmed] ?? PATTERNS.reduce<string | undefined>((acc, [re, fn]) => {
