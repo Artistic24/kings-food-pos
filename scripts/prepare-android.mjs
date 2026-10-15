@@ -90,7 +90,6 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
-import java.util.Base64;
 
 @CapacitorPlugin(name = "KingsFoodPrinter")
 public class KingsFoodPrinterPlugin extends Plugin {
@@ -193,97 +192,68 @@ public class KingsFoodPrinterPlugin extends Plugin {
 
     @PluginMethod
     public void saveReceiptPdf(PluginCall call) {
+        String base64 = call.getString("base64");
         String fileName = call.getString("fileName");
         String year = call.getString("year");
         String month = call.getString("month");
-        String jobName = call.getString("jobName", "Medical Centre POS Receipt");
-        if (fileName == null || year == null || month == null) {
-            call.reject("Missing PDF receipt file information");
+        if (base64 == null || fileName == null || year == null || month == null) {
+            call.reject("Missing PDF receipt data");
             return;
         }
+
+        Uri savedUri = null;
+        String savedPath;
         try {
-            final Uri savedUri;
-            final ParcelFileDescriptor outputDescriptor;
-            final String savedPath;
+            byte[] pdfBytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT);
+            if (pdfBytes.length < 5 || pdfBytes[0] != '%' || pdfBytes[1] != 'P' ||
+                pdfBytes[2] != 'D' || pdfBytes[3] != 'F' || pdfBytes[4] != '-') {
+                throw new IllegalArgumentException("Generated receipt does not contain a valid PDF header");
+            }
+
+            String safeFileName = new File(fileName).getName();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues values = new ContentValues();
-                values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                values.put(MediaStore.Downloads.DISPLAY_NAME, safeFileName);
                 values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
                 values.put(MediaStore.Downloads.RELATIVE_PATH,
-                    "Download/Medical Centre POS/Receipts/" + year + "/" + month + "/");
+                    Environment.DIRECTORY_DOWNLOADS + "/Medical Centre POS/Receipts/" + year + "/" + month + "/");
                 values.put(MediaStore.Downloads.IS_PENDING, 1);
                 savedUri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                 if (savedUri == null) throw new Exception("Android could not create the PDF file");
-                outputDescriptor = getContext().getContentResolver().openFileDescriptor(savedUri, "w");
-                if (outputDescriptor == null) throw new Exception("Android could not open the PDF file");
+
+                OutputStream output = getContext().getContentResolver().openOutputStream(savedUri, "w");
+                if (output == null) throw new Exception("Android could not open the PDF file");
+                try (OutputStream stream = output) {
+                    stream.write(pdfBytes);
+                    stream.flush();
+                }
+
+                ContentValues done = new ContentValues();
+                done.put(MediaStore.Downloads.IS_PENDING, 0);
+                getContext().getContentResolver().update(savedUri, done, null, null);
                 savedPath = savedUri.toString();
             } else {
                 File root = new File(getContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
                     "Medical Centre POS/Receipts/" + year + "/" + month);
-                if (!root.exists() && !root.mkdirs()) throw new Exception("Could not create PDF receipt directory");
-                File file = new File(root, fileName);
-                savedUri = null;
-                outputDescriptor = ParcelFileDescriptor.open(file,
-                    ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_TRUNCATE | ParcelFileDescriptor.MODE_READ_WRITE);
+                if (!root.exists() && !root.mkdirs()) {
+                    throw new Exception("Could not create PDF receipt directory");
+                }
+                File file = new File(root, safeFileName);
+                try (OutputStream stream = new FileOutputStream(file)) {
+                    stream.write(pdfBytes);
+                    stream.flush();
+                }
                 savedPath = file.getAbsolutePath();
             }
-            PrintDocumentAdapter adapter = getBridge().getWebView().createPrintDocumentAdapter(jobName);
-            PrintAttributes attributes = new PrintAttributes.Builder()
-                .setMediaSize(PrintAttributes.MediaSize.UNKNOWN_PORTRAIT)
-                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
-                .build();
-            adapter.onLayout(null, attributes, new CancellationSignal(), new PrintDocumentAdapter.LayoutResultCallback() {
-                @Override public void onLayoutFinished(PrintDocumentInfo info, boolean changed) {
-                    adapter.onWrite(new PageRange[] { PageRange.ALL_PAGES }, outputDescriptor,
-                        new CancellationSignal(), new PrintDocumentAdapter.WriteResultCallback() {
-                            @Override public void onWriteFinished(PageRange[] pages) {
-                                try {
-                                    outputDescriptor.close();
-                                    if (savedUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                        ContentValues done = new ContentValues();
-                                        done.put(MediaStore.Downloads.IS_PENDING, 0);
-                                        getContext().getContentResolver().update(savedUri, done, null, null);
-                                    }
-                                    JSObject ret = new JSObject();
-                                    ret.put("success", true);
-                                    ret.put("path", savedPath);
-                                    call.resolve(ret);
-                                } catch (Exception e) {
-                                    call.reject("PDF was created but could not be finalized", e);
-                                }
-                            }
-                            @Override public void onWriteFailed(CharSequence error) {
-                                try { outputDescriptor.close(); } catch (Exception ignored) {}
-                                if (savedUri != null) {
-                                    try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
-                                }
-                                call.reject("Could not write the PDF receipt: " + String.valueOf(error));
-                            }
-                            @Override public void onWriteCancelled() {
-                                try { outputDescriptor.close(); } catch (Exception ignored) {}
-                                if (savedUri != null) {
-                                    try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
-                                }
-                                call.reject("PDF receipt saving was cancelled");
-                            }
-                        });
-                }
-                @Override public void onLayoutFailed(CharSequence error) {
-                    try { outputDescriptor.close(); } catch (Exception ignored) {}
-                    if (savedUri != null) {
-                        try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
-                    }
-                    call.reject("Could not prepare PDF receipt: " + String.valueOf(error));
-                }
-                @Override public void onLayoutCancelled() {
-                    try { outputDescriptor.close(); } catch (Exception ignored) {}
-                    if (savedUri != null) {
-                        try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
-                    }
-                    call.reject("PDF receipt saving was cancelled");
-                }
-            }, null);
+
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            ret.put("path", savedPath);
+            call.resolve(ret);
         } catch (Exception e) {
+            if (savedUri != null) {
+                try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
+            }
             call.reject("Could not save PDF receipt", e);
         }
     }
@@ -301,7 +271,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
         }
 
         try {
-            byte[] data = Base64.getDecoder().decode(base64);
+            byte[] data = android.util.Base64.decode(base64, android.util.Base64.DEFAULT);
             String relative = "Download/Medical Centre POS/Receipts/" + year + "/" + month + "/";
             String savedPath;
 
