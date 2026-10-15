@@ -174,7 +174,7 @@ function PosPage() {
   const cartPanel = (
     <div className="space-y-4">
       {cart.length === 0 ? (
-        <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No items yet. Tap a laboratory act or pharmacy article to add it.</p>
+        <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">No items yet. Tap a laboratory act or pharmacy item to add it.</p>
       ) : (
         <ul className="divide-y divide-border">
           {cart.map((i) => (
