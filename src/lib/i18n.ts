@@ -270,7 +270,7 @@ const EN_ALIASES: Record<string, string> = {
 const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Table (.+)$/, (m) => `Table ${m[1]}`],
   [/^Delivery · (.+)$/, (m) => `Livraison · ${m[1]}`],
-  [/^Discount \((.+)\)$/, (m) => `Remise (${m[1]})`],
+  [/^Discount \((.+)\)$/, (m) => `Réduction (${m[1]})`],
   [/^Account: (.+)$/, (m) => `Compte : ${m[1]}`],
   [/^Name: (.+)$/, (m) => `Nom : ${m[1]}`],
   [/^Amount: (.+)$/, (m) => `Montant : ${m[1]}`],
