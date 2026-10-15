@@ -67,12 +67,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.CancellationSignal;
+import android.os.ParcelFileDescriptor;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.print.PrintAttributes;
 import android.print.PrintJob;
+import android.print.PageRange;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintDocumentInfo;
 import android.print.PrintManager;
 import android.provider.Settings;
 
@@ -184,6 +189,103 @@ public class KingsFoodPrinterPlugin extends Plugin {
         }
 
         handler.postDelayed(() -> waitForPrintJob(call, job, startedAt), 500);
+    }
+
+    @PluginMethod
+    public void saveReceiptPdf(PluginCall call) {
+        String fileName = call.getString("fileName");
+        String year = call.getString("year");
+        String month = call.getString("month");
+        String jobName = call.getString("jobName", "Medical Centre POS Receipt");
+        if (fileName == null || year == null || month == null) {
+            call.reject("Missing PDF receipt file information");
+            return;
+        }
+        try {
+            final Uri savedUri;
+            final ParcelFileDescriptor outputDescriptor;
+            final String savedPath;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
+                values.put(MediaStore.Downloads.RELATIVE_PATH,
+                    "Download/Medical Centre POS/Receipts/" + year + "/" + month + "/");
+                values.put(MediaStore.Downloads.IS_PENDING, 1);
+                savedUri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (savedUri == null) throw new Exception("Android could not create the PDF file");
+                outputDescriptor = getContext().getContentResolver().openFileDescriptor(savedUri, "w");
+                if (outputDescriptor == null) throw new Exception("Android could not open the PDF file");
+                savedPath = savedUri.toString();
+            } else {
+                File root = new File(getContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                    "Medical Centre POS/Receipts/" + year + "/" + month);
+                if (!root.exists() && !root.mkdirs()) throw new Exception("Could not create PDF receipt directory");
+                File file = new File(root, fileName);
+                savedUri = null;
+                outputDescriptor = ParcelFileDescriptor.open(file,
+                    ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_TRUNCATE | ParcelFileDescriptor.MODE_READ_WRITE);
+                savedPath = file.getAbsolutePath();
+            }
+            PrintDocumentAdapter adapter = getBridge().getWebView().createPrintDocumentAdapter(jobName);
+            PrintAttributes attributes = new PrintAttributes.Builder()
+                .setMediaSize(PrintAttributes.MediaSize.UNKNOWN_PORTRAIT)
+                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                .build();
+            adapter.onLayout(null, attributes, new CancellationSignal(), new PrintDocumentAdapter.LayoutResultCallback() {
+                @Override public void onLayoutFinished(PrintDocumentInfo info, boolean changed) {
+                    adapter.onWrite(new PageRange[] { PageRange.ALL_PAGES }, outputDescriptor,
+                        new CancellationSignal(), new PrintDocumentAdapter.WriteResultCallback() {
+                            @Override public void onWriteFinished(PageRange[] pages) {
+                                try {
+                                    outputDescriptor.close();
+                                    if (savedUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                        ContentValues done = new ContentValues();
+                                        done.put(MediaStore.Downloads.IS_PENDING, 0);
+                                        getContext().getContentResolver().update(savedUri, done, null, null);
+                                    }
+                                    JSObject ret = new JSObject();
+                                    ret.put("success", true);
+                                    ret.put("path", savedPath);
+                                    call.resolve(ret);
+                                } catch (Exception e) {
+                                    call.reject("PDF was created but could not be finalized", e);
+                                }
+                            }
+                            @Override public void onWriteFailed(CharSequence error) {
+                                try { outputDescriptor.close(); } catch (Exception ignored) {}
+                                if (savedUri != null) {
+                                    try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
+                                }
+                                call.reject("Could not write the PDF receipt: " + String.valueOf(error));
+                            }
+                            @Override public void onWriteCancelled() {
+                                try { outputDescriptor.close(); } catch (Exception ignored) {}
+                                if (savedUri != null) {
+                                    try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
+                                }
+                                call.reject("PDF receipt saving was cancelled");
+                            }
+                        });
+                }
+                @Override public void onLayoutFailed(CharSequence error) {
+                    try { outputDescriptor.close(); } catch (Exception ignored) {}
+                    if (savedUri != null) {
+                        try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
+                    }
+                    call.reject("Could not prepare PDF receipt: " + String.valueOf(error));
+                }
+                @Override public void onLayoutCancelled() {
+                    try { outputDescriptor.close(); } catch (Exception ignored) {}
+                    if (savedUri != null) {
+                        try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
+                    }
+                    call.reject("PDF receipt saving was cancelled");
+                }
+            }, null);
+        } catch (Exception e) {
+            call.reject("Could not save PDF receipt", e);
+        }
     }
 
     @PluginMethod

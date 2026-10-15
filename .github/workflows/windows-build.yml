@@ -16,49 +16,46 @@ concurrency:
 jobs:
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 45
-
+    timeout-minutes: 75
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 22
-
       - name: Upgrade npm
         shell: pwsh
         run: npm install --global npm@11
-
       - name: Install dependencies
         shell: pwsh
         run: npm install --no-audit --no-fund --legacy-peer-deps
-
+      - name: Allow Electron postinstall and install its binary
+        shell: pwsh
+        run: |
+          npm install-scripts approve electron
+          npm rebuild electron
+          npx electron --version
+      - name: Run application tests
+        shell: pwsh
+        run: npm test
       - name: Read app version
         id: version
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          Write-Host "Medical Centre POS version: $version"
-
+          Write-Host "Building existing Medical Centre POS version: $version"
       - name: Check Electron entry points
         shell: pwsh
         run: |
           node --check electron/main.cjs
           node --check electron/preload.cjs
           node --check electron/receipts.cjs
-
-      - name: Run automated regression tests
-        shell: pwsh
-        run: npm test
-
       - name: Setup Python for icon generation
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Generate Medical Centre POS Windows icon
         shell: pwsh
         run: |
@@ -66,7 +63,6 @@ jobs:
           @'
           from pathlib import Path
           from PIL import Image, ImageDraw
-
           image = Image.new("RGBA", (256, 256), (15, 118, 110, 255))
           draw = ImageDraw.Draw(image)
           draw.rounded_rectangle((8, 8, 248, 248), radius=48, fill=(15, 118, 110, 255))
@@ -74,45 +70,70 @@ jobs:
           draw.rounded_rectangle((48, 104, 208, 152), radius=14, fill=(255, 255, 255, 255))
           image.save(Path("public/icons/medical-centre.ico"), format="ICO", sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])
           '@ | python -
-
-      - name: Build Windows installer
-        shell: pwsh
-        run: npm run build:win
-
-      - name: Verify installer
+      - name: Build modern Windows x64 application
         shell: pwsh
         run: |
-          $installer = "release/Medical-Centre-POS-${{ steps.version.outputs.version }}.exe"
-          if (!(Test-Path $installer)) {
-            Write-Host "Release directory contents:"
-            Get-ChildItem -Recurse release | Select-Object FullName, Length
-            throw "Expected medical-centre installer was not produced: $installer"
-          }
-          Get-Item $installer | Format-List FullName, Length, LastWriteTime
-
-      - name: Upload Windows installer artifact
+          npm run build:web
+          npm pkg set "build.directories.output=release-win-x64"
+          npx electron-builder --win nsis --x64 --publish never
+      - name: Verify modern Windows x64 installer
+        shell: pwsh
+        run: |
+          $installer = "release-win-x64/Medical-Centre-POS-${{ steps.version.outputs.version }}-x64.exe"
+          if (!(Test-Path $installer)) { throw "Missing modern x64 installer: $installer" }
+      - name: Build Windows 7 32-bit legacy application
+        shell: pwsh
+        run: |
+          # Electron 22 is the final Electron line supporting Windows 7. It is end-of-life.
+          # This output is for isolated/offline Windows 7 systems only.
+          npm pkg set "devDependencies.electron=22.3.27"
+          npm pkg set "build.win.target[0].arch[0]=ia32"
+          npm pkg set "build.directories.output=release-win-ia32"
+          npm install --no-audit --no-fund --legacy-peer-deps
+          npm install-scripts approve electron
+          npm rebuild electron
+          npx electron --version
+          npx electron-builder --win nsis --ia32 --publish never
+      - name: Verify and stage installers
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $modern = "release-win-x64/Medical-Centre-POS-$version-x64.exe"
+          $legacy = "release-win-ia32/Medical-Centre-POS-$version-ia32.exe"
+          if (!(Test-Path $modern)) { throw "Missing modern x64 installer: $modern" }
+          if (!(Test-Path $legacy)) { throw "Missing Win7 x86 installer: $legacy" }
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item $modern "release/Medical-Centre-POS-$version-x64.exe" -Force
+          Copy-Item $legacy "release/Medical-Centre-POS-$version-ia32.exe" -Force
+          Copy-Item $modern "release/Medical-Centre-POS-$version.exe" -Force
+          Copy-Item $modern "release/Medical-Centre-POS-$version-win10-11-x64.exe" -Force
+          Copy-Item $legacy "release/Medical-Centre-POS-$version-win7-32bit.exe" -Force
+          Get-ChildItem release -Filter "*.exe" | Select-Object Name, Length
+      - name: Upload Windows installer artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Medical-Centre-POS-Windows-${{ steps.version.outputs.version }}
-          path: release/Medical-Centre-POS-${{ steps.version.outputs.version }}.exe
+          path: |
+            release/Medical-Centre-POS-${{ steps.version.outputs.version }}.exe
+            release/Medical-Centre-POS-${{ steps.version.outputs.version }}-x64.exe
+            release/Medical-Centre-POS-${{ steps.version.outputs.version }}-ia32.exe
+            release/Medical-Centre-POS-${{ steps.version.outputs.version }}-win10-11-x64.exe
+            release/Medical-Centre-POS-${{ steps.version.outputs.version }}-win7-32bit.exe
           if-no-files-found: error
           retention-days: 30
-
-      - name: Publish Windows installer to the versioned GitHub Release
+      - name: Replace assets on the existing release only
         if: (startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-medical')) || github.ref == 'refs/heads/release/medical-centre-v1.3.0'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "v${{ steps.version.outputs.version }}"
-          $installer = "release/Medical-Centre-POS-${{ steps.version.outputs.version }}.exe"
-          gh release view $tag 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --title "Medical Centre POS ${{ steps.version.outputs.version }}" --notes "Medical Centre POS Windows release. Offline-first cashier, pharmacy and laboratory receipts." --target $env:GITHUB_SHA
-            if ($LASTEXITCODE -ne 0) {
-              gh release view $tag 2>$null
-              if ($LASTEXITCODE -ne 0) { throw "Could not create or access GitHub Release $tag" }
-            }
-          }
-          gh release upload $tag $installer --clobber
-          if ($LASTEXITCODE -ne 0) { throw "Could not upload the Windows installer to $tag" }
+          gh release view $tag
+          if ($LASTEXITCODE -ne 0) { throw "Expected existing release $tag is missing; refusing to create a new version." }
+          $default = "release/Medical-Centre-POS-${{ steps.version.outputs.version }}.exe"
+          $x64 = "release/Medical-Centre-POS-${{ steps.version.outputs.version }}-x64.exe"
+          $ia32 = "release/Medical-Centre-POS-${{ steps.version.outputs.version }}-ia32.exe"
+          $modern = "release/Medical-Centre-POS-${{ steps.version.outputs.version }}-win10-11-x64.exe"
+          $legacy = "release/Medical-Centre-POS-${{ steps.version.outputs.version }}-win7-32bit.exe"
+          gh release upload $tag $default $x64 $ia32 $modern $legacy --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Could not update current version's Windows assets" }

@@ -58,13 +58,15 @@ function PosPage() {
     if (!methods.find((m) => m.id === pay) && methods[0]) setPay(methods[0].id);
   }, [settings, pay, methods]);
 
-  const visible = useMemo(
-    () =>
-      dishes.filter(
-        (d) => d.available && (cat === "all" || d.categoryId === cat) && d.name.toLowerCase().includes(query.toLowerCase()),
-      ),
-    [dishes, cat, query],
-  );
+  const visible = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase();
+    return dishes.filter((dish) => {
+      const categoryName = categories.find((item) => item.id === dish.categoryId)?.name ?? "";
+      const matchesSearch = !term || [dish.name, dish.description, categoryName, String(dish.price)]
+        .some((value) => String(value ?? "").toLocaleLowerCase().includes(term));
+      return dish.available && (cat === "all" || dish.categoryId === cat) && matchesSearch;
+    });
+  }, [dishes, categories, cat, query]);
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const tax = Math.round((subtotal * (settings.taxRate || 0)) / 100);
@@ -328,7 +330,7 @@ function PosPage() {
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un acte ou un article" className="rounded-full pl-9" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search acts, items, categories or prices" className="rounded-full pl-9" />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[{ id: "all", name: "All" }, ...categories].map((c) => (

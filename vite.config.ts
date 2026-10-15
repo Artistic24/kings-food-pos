@@ -22,7 +22,25 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,png,jpg,jpeg,svg,ico,webmanifest,woff2}"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url, request }) => url.origin === self.location.origin && request.destination === "document",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "medical-centre-pages",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 20, maxAgeSeconds: 604800 },
+            },
+          },
+          {
+            urlPattern: ({ url, request }) => url.origin === self.location.origin && ["script", "style", "image", "font"].includes(request.destination),
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "medical-centre-static",
+              expiration: { maxEntries: 200, maxAgeSeconds: 2592000 },
+            },
+          },
+        ],
       },
     }),
   ],

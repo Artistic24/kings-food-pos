@@ -14,6 +14,7 @@ export interface AndroidPrinterPlugin {
     year: string;
     month: string;
   }): Promise<{ success: boolean; path?: string }>;
+  saveReceiptPdf(options: { fileName: string; year: string; month: string; jobName: string }): Promise<{ success: boolean; path?: string; error?: string }>;
 }
 
 export const AndroidPrinter = registerPlugin<AndroidPrinterPlugin>("KingsFoodPrinter");

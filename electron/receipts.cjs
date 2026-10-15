@@ -229,7 +229,7 @@ async function archivePrintedReceipt({ order, settings }) {
   try {
     await writeWorkbookAtomically(patientWorkbook, patientFile);
   } catch (error) {
-    const fallbackPath = path.join(root, "Medical-Centre-Receipt-" + safeFilePart(order.ref, "Receipt") + ".xlsx");
+    const fallbackPath = path.join(root, safeFilePart(order.customer, "Patient") + "_" + safeFilePart(order.ref, "Receipt") + "_" + Date.now() + ".xlsx");
     try {
       await writeWorkbookAtomically(patientWorkbook, fallbackPath);
       return {
@@ -267,19 +267,24 @@ async function savePrintedReceiptPdf({ order, pdfBuffer }) {
   const root = path.join(documents, "Medical Centre POS", "Receipts", yyyy, mm);
   await fs.promises.mkdir(root, { recursive: true });
 
-  const filePath = path.join(root, safeFilePart(order.customer, "Patient") + "_" + safeFilePart(order.ref, "Receipt") + ".pdf");
+  const patientBase = safeFilePart(order.customer, "Patient") + "_" + safeFilePart(order.ref, "Receipt");
+  let filePath = path.join(root, patientBase + ".pdf");
   const tempPath = filePath + ".tmp-" + process.pid + "-" + Date.now();
+  let fallback = false;
   try {
     await fs.promises.writeFile(tempPath, pdfBuffer);
     await fs.promises.rm(filePath, { force: true });
     await fs.promises.rename(tempPath, filePath);
   } catch (error) {
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
-    throw error;
+    filePath = path.join(root, patientBase + "_" + Date.now() + ".pdf");
+    await fs.promises.writeFile(filePath, pdfBuffer);
+    fallback = true;
   }
 
   return {
     success: true,
+    fallback,
     filePath,
     relativePath: path.relative(documents, filePath),
   };

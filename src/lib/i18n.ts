@@ -49,8 +49,8 @@ export const FR: Record<string, string> = {
   "No items here. Add acts or items in Articles & acts.": "Aucun article ici. Ajoutez des actes ou articles dans Articles & actes.",
   "No items yet. Tap a laboratory act or pharmacy item to add it.": "Aucun article pour le moment. Touchez un acte de laboratoire ou un article de pharmacie pour l'ajouter.",
   "Receipt items": "Articles du reçu",
-  "Cash receipt": "Reçu de caisse",
-  "Pharmacy receipt": "Reçu de pharmacie",
+  "Cash receipt": "Reçu de Caisse",
+  "Pharmacy receipt": "Reçu de Pharmacie",
   "Patient name": "Nom du patient",
   "Patient code": "Code patient",
   "Patient phone": "Téléphone du patient",
@@ -176,7 +176,31 @@ export const FR: Record<string, string> = {
   "e.g. Buy new bulbs": "Ex. : acheter de nouvelles ampoules",
   "Service": "Service",
   "Unit": "PU",
-  "Qty": "Qté",
+  "Qty": "QTE",
+  "Search acts, items, categories or prices": "Rechercher des actes, articles, catégories ou prix",
+  "Patient full name": "Nom complet du patient",
+  "No.": "N°",
+  "Patient code:": "Code Patient :",
+  "Medical service:": "Service :",
+  "Practitioner:": "Traitant :",
+  "Patient phone:": "Tél. patient :",
+  "Phone:": "Tél. :",
+  "Act": "ACTE",
+  "Item": "ARTICLE",
+  "Disc.": "Réduc.",
+  "Subtotal": "Sous-total",
+  "Discount": "Réduction",
+  "Tax": "Taxes",
+  "Total amount": "Montant Total",
+  "Amount received": "Montant versé",
+  "Change given": "Montant rendu",
+  "Patient debt": "Dette du patient",
+  "Deposit balance": "Solde Caution",
+  "Printed by:": "Imprimé par :",
+  "MEDICAL CENTRE": "CENTRE MEDICAL",
+  "LABORATORY": "LABORATOIRE",
+  "Reçu de Caisse": "Reçu de Caisse",
+  "Reçu de Pharmacie": "Reçu de Pharmacie",
 };
 
 const EN_ALIASES: Record<string, string> = {
@@ -224,6 +248,26 @@ const EN_ALIASES: Record<string, string> = {
   "Paiement partiel : le reste sera indiqué sur le reçu.": "Partial payment: the remaining balance will be shown on the receipt.",
   "PU": "Unit",
   "QTE": "Qty",
+  "Réduction": "Discount",
+  "Réduction (5%)": "Discount (5%)",
+  "Réduction (10%)": "Discount (10%)",
+  "Réduction (15%)": "Discount (15%)",
+  "Réduction (20%)": "Discount (20%)",
+  "Reçu de Caisse": "Cash receipt",
+  "Reçu de Pharmacie": "Pharmacy receipt",
+  "CENTRE MEDICAL": "MEDICAL CENTRE",
+  "LABORATOIRE": "LABORATORY",
+  "Imprimé par :": "Printed by:",
+  "Tél. :": "Phone:",
+  "Sous-total": "Subtotal",
+  "Montant Total": "Total amount",
+  "Montant versé": "Amount received",
+  "Montant rendu": "Change given",
+  "Dette du patient": "Patient debt",
+  "Solde Caution": "Deposit balance",
+  "ACTE": "Act",
+  "ARTICLE": "Item",
+  "Réduc.": "Disc.",
 };
 
 const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
@@ -238,6 +282,13 @@ const PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Delete (.+)\?$/, (m) => `Supprimer ${m[1]} ?`],
 ];
 
+const EN_PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^Réduction \\((.+)\\)$/, (m) => "Discount (" + m[1] + ")"],
+  [/^N°\\s*:\\s*(.*)$/, (m) => "No.: " + m[1]],
+  [/^Imprimé par\\s*:\\s*(.*)$/, (m) => "Printed by: " + m[1]],
+  [/^Tél\\.\\s*:\\s*(.*)$/, (m) => "Phone: " + m[1]],
+];
+
 const EN: Record<string, string> = Object.fromEntries(
   Object.entries(FR).map(([english, french]) => [french, english]),
 );
@@ -246,7 +297,11 @@ export function translate(text: string, lang: Lang): string {
   const trimmed = text.trim();
   if (!trimmed) return text;
   if (lang === "en") {
-    const english = EN[trimmed] ?? EN_ALIASES[trimmed];
+    const english = EN[trimmed] ?? EN_ALIASES[trimmed] ?? EN_PATTERNS.reduce<string | undefined>((acc, [re, fn]) => {
+      if (acc) return acc;
+      const match = trimmed.match(re);
+      return match ? fn(match) : undefined;
+    }, undefined);
     return english ? text.replace(trimmed, english) : text;
   }
   const hit = FR[trimmed] ?? PATTERNS.reduce<string | undefined>((acc, [re, fn]) => {

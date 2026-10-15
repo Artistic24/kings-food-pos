@@ -192,18 +192,44 @@ export async function printReceiptAndArchive(
   settings: { printerName?: string },
 ): Promise<{ printed: boolean; archived: boolean; pdfSaved?: boolean; fallback: boolean; message?: string }> {
   if (isAndroidApp()) {
-    const printed = await AndroidPrinter.printCurrentPage({ jobName: "Medical Centre POS Receipt" });
+    const sale = order as { customer?: string; ref?: string; createdAt?: number };
+    const patientName = String(sale.customer || "Patient").normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 _-]+/g, "").trim() || "Patient";
+    const safePatient = patientName.replace(/\s+/g, "_");
+    const receiptRef = String(sale.ref || "Receipt").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const jobName = "Receipt - " + patientName + " - " + receiptRef;
+    const printed = await AndroidPrinter.printCurrentPage({ jobName });
     if (!printed.success) {
       return { printed: false, archived: false, fallback: false, message: printed.failureReason || "Android printing was cancelled or failed." };
     }
     const archived = await createAndroidExcelReceipt("sale", order);
+    const date = new Date(Number(sale.createdAt || Date.now()));
+    let pdfSaved = false;
+    let pdfPath = "";
+    try {
+      const pdf = await AndroidPrinter.saveReceiptPdf({
+        fileName: safePatient + "_" + receiptRef + ".pdf",
+        year: String(date.getFullYear()),
+        month: String(date.getMonth() + 1).padStart(2, "0"),
+        jobName,
+      });
+      pdfSaved = Boolean(pdf.success);
+      pdfPath = pdf.path || safePatient + "_" + receiptRef + ".pdf";
+    } catch (error) {
+      pdfPath = error instanceof Error ? error.message : String(error);
+    }
     return {
       printed: true,
       archived: archived.success,
-      fallback: false,
-      message: archived.success
-        ? "Printed successfully and saved to Excel: " + archived.relativePath
-        : "Printed successfully, but the Excel receipt archive could not be saved.",
+      pdfSaved,
+      fallback: !archived.success || !pdfSaved,
+      message: archived.success && pdfSaved
+        ? "Receipt printed; Excel and PDF saved."
+        : archived.success
+          ? "Receipt saved to Excel, but PDF export failed: " + pdfPath
+          : pdfSaved
+            ? "Receipt saved to PDF, but Excel export failed."
+            : "Receipt printed, but Excel and PDF saving failed.",
     };
   }
 
@@ -233,7 +259,7 @@ export async function printReceiptAndArchive(
   }
 
   const archived = await desktop.archiveReceipt({ order, settings });
-  const pdf = await desktop.saveReceiptPdf({ order });
+  const pdf = await desktop.saveReceiptPdf({ order }).catch((error) => ({ success: false, error: error instanceof Error ? error.message : String(error) }));
   const message = archived.success && pdf.success
     ? archived.warning
       ? "Receipt saved as patient Excel and PDF, but the daily Excel archive could not be updated."
