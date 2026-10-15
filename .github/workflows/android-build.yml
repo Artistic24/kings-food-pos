@@ -81,7 +81,8 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/medical-centre-release.jks"
           test -s "$RUNNER_TEMP/medical-centre-release.jks"
 
-      - name: Create temporary CI-only signing key\n        if: env.MEDICAL_POS_STABLE_SIGNING != 'true'
+      - name: Create temporary CI-only signing key
+        if: env.MEDICAL_POS_STABLE_SIGNING != 'true'
         env:
           KEYSTORE_PASSWORD: medical-centre-release-${{ github.run_id }}
           KEY_PASSWORD: medical-centre-release-${{ github.run_id }}
