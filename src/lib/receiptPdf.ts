@@ -75,14 +75,14 @@ function renderTextLine(line: PdfLine, y: number): string {
   const size = line.size ?? 10;
   const font = line.bold ? "F2" : "F1";
   const approximateWidth = line.text.length * size * 0.5;
-  const x = line.center ? Math.max(36, (595 - approximateWidth) / 2) : 40;
+  const x = line.center ? Math.max(12, (360 - approximateWidth) / 2) : 12;
   return "BT /" + font + " " + size + " Tf 1 0 0 1 " +
     x.toFixed(2) + " " + y.toFixed(2) + " Tm " +
     pdfLiteral(line.text) + " Tj ET";
 }
 
 function createPdf(lines: PdfLine[]): string {
-  const perPage = 43;
+  const perPage = 18;
   const pages: PdfLine[][] = [];
   for (let index = 0; index < lines.length; index += perPage) {
     const pageLines = lines.slice(index, index + perPage);
@@ -103,10 +103,10 @@ function createPdf(lines: PdfLine[]): string {
     const contentId = pageId + 1;
     pageIds.push(pageId);
     const stream = pageLines.map((line, lineIndex) =>
-      renderTextLine(line, 800 - lineIndex * 17),
+      renderTextLine(line, 204 - lineIndex * 10),
     ).join("\n");
     objects.set(pageId,
-      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 360 216] " +
       "/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents " +
       contentId + " 0 R >>");
     objects.set(contentId, "<< /Length " + stream.length + " >>\nstream\n" + stream + "\nendstream");
@@ -152,7 +152,7 @@ export function generateReceiptPdfBase64(order: Order, settings: Partial<Setting
   const locale = lang === "fr" ? "fr-FR" : "en-GB";
   const lines: PdfLine[] = [];
   const add = (text: unknown, options: Omit<PdfLine, "text"> = {}) => {
-    for (const segment of wrap(text, options.size && options.size >= 13 ? 58 : 82)) {
+    for (const segment of wrap(text, options.size && options.size >= 13 ? 28 : 40)) {
       lines.push({ text: segment, ...options });
     }
   };
