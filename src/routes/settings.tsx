@@ -33,6 +33,7 @@ function SettingsPage() {
   const lang = useLang();
   const { data } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
   const [s, setS] = useState<Settings>(DEFAULT_SETTINGS);
+  const [newPhysician, setNewPhysician] = useState("");
   const [printers, setPrinters] = useState<DesktopPrinter[]>([]);
   const [loadingPrinters, setLoadingPrinters] = useState(false);
   const isAndroid = Capacitor.getPlatform() === "android" && Capacitor.isNativePlatform();
@@ -177,6 +178,41 @@ function SettingsPage() {
         </div>
       </section>
 
+
+      <section className="space-y-3 rounded-2xl bg-card p-4 shadow-soft">
+        <div>
+          <h2 className="font-display font-bold">Médecins consultants</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Gérez les noms disponibles dans la liste de sélection lors de la création d’un reçu patient.</p>
+        </div>
+        <form className="flex gap-2" onSubmit={(e) => {
+          e.preventDefault();
+          const name = newPhysician.trim();
+          if (!name) return;
+          const current = s.consultingPhysicians ?? [];
+          if (current.some((item) => item.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+            toast.info("Ce médecin existe déjà.");
+            return;
+          }
+          setS({ ...s, consultingPhysicians: [...current, name] });
+          setNewPhysician("");
+        }}>
+          <Input value={newPhysician} onChange={(e) => setNewPhysician(e.target.value)} placeholder="Nom du médecin consultant" aria-label="Nom du médecin consultant" />
+          <Button type="submit" className="shrink-0 rounded-full"><Plus className="size-4" /> Ajouter</Button>
+        </form>
+        {(s.consultingPhysicians ?? []).length ? (
+          <ul className="space-y-2">
+            {(s.consultingPhysicians ?? []).map((name) => (
+              <li key={name} className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2">
+                <span className="text-sm font-medium">{name}</span>
+                <Button type="button" size="icon" variant="outline" aria-label={`Supprimer ${name}`} onClick={() => setS({ ...s, consultingPhysicians: (s.consultingPhysicians ?? []).filter((item) => item !== name) })}>
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">Aucun médecin ajouté pour le moment.</p>}
+        <p className="text-xs text-muted-foreground">Cliquez sur « Enregistrer les paramètres » pour conserver vos modifications.</p>
+      </section>
 
       <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-soft md:grid-cols-2">
         <h2 className="font-display font-bold md:col-span-2">Établissement</h2>
