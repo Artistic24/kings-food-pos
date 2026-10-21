@@ -91,6 +91,7 @@ export type Settings = {
   printerName?: string;
   receiptLogo?: string;
   cashierName?: string;
+  consultingPhysicians?: string[];
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -117,6 +118,7 @@ export const DEFAULT_SETTINGS: Settings = {
   printerName: "",
   receiptLogo: "",
   cashierName: "",
+  consultingPhysicians: [],
   payments: [
     { id: "cash", name: "Cash", account: "", holder: "", instructions: "Pay at the counter.", enabled: true },
     { id: "card", name: "Bank card", account: "", holder: "", instructions: "Charge with your card terminal, then confirm here.", enabled: true },
