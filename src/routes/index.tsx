@@ -158,12 +158,20 @@ function PosPage() {
     if (!receipt) return;
     try {
       const result = await printReceiptAndArchive(receipt, settings);
-      if (result.printed && result.archived) {
-        toast.success("Receipt printed and saved to Excel");
-      } else if (result.printed) {
-        toast.warning("Receipt printed, but Excel archiving failed");
+      if (result.printed) {
+        const printedReceipt = { ...receipt, printedAt: Date.now() };
+        await saveOrder(printedReceipt);
+        setReceipt(printedReceipt);
+        qc.invalidateQueries({ queryKey: ["orders"] });
+        if (result.archived) {
+          toast.success("Receipt printed and saved to Excel");
+        } else {
+          toast.warning(result.message || "Receipt printed, but receipt archiving failed");
+        }
       } else if (result.fallback) {
         toast.info(result.message || "Browser print dialog opened");
+      } else if (result.message) {
+        toast.error(result.message);
       }
     } catch (error) {
       console.error("Receipt print/archive failed:", error);
@@ -225,8 +233,12 @@ function PosPage() {
           <select id="medical-service" value={service} onChange={(e) => setService(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="All">All</option><option value="Laboratoire">Laboratoire</option><option value="Echographie">Echographie</option><option value="Consultation">Consultation</option><option value="Maternité">Maternité</option><option value="Radiologie">Radiologie</option><option value="Théâtre">Théâtre</option></select>
         </div>
         {receiptKind === "cashier" && <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="practitioner">Traitant / médecin</Label>
-          <Input id="practitioner" value={practitioner} onChange={(e) => setPractitioner(e.target.value)} placeholder="Nom du médecin ou du responsable" />
+          <Label htmlFor="practitioner">Médecin consultant</Label>
+          <select id="practitioner" value={practitioner} onChange={(e) => setPractitioner(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+            <option value="">Sélectionner un médecin (facultatif)</option>
+            {(settings.consultingPhysicians ?? []).map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+          {!(settings.consultingPhysicians ?? []).length && <p className="text-xs text-muted-foreground">Ajoutez les médecins consultants dans Settings avant de créer un reçu.</p>}
         </div>}
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="reference">Référence / note facultative</Label>
@@ -409,8 +421,8 @@ function PosPage() {
             <DialogTitle className="font-display">Aperçu du reçu</DialogTitle>
           </DialogHeader>
           {receipt && <Receipt order={receipt} settings={settings} />}
-          <Button className="rounded-full no-print" onClick={() => void printCurrentReceipt()}>
-            <Printer className="size-4" /> Print receipt
+          <Button className="rounded-full no-print" disabled={Boolean(receipt?.printedAt)} onClick={() => void printCurrentReceipt()}>
+            {receipt?.printedAt ? <><Check className="size-4" /> Printed</> : <><Printer className="size-4" /> Print receipt</>}
           </Button>
         </DialogContent>
       </Dialog>
