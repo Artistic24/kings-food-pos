@@ -162,7 +162,7 @@
 .receipt-print { display: none; }
 
 @media print {
-  @page { size: 80mm auto; margin: 0; }
+  @page { size: 5in 3in; margin: 0; }
   body > [data-state="open"] { display: none !important; }
   body * { visibility: hidden !important; }
   .receipt-print, .receipt-print * { visibility: visible !important; }
@@ -171,7 +171,9 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 80mm;
+    width: 5in;
+    height: 3in;
+    overflow: hidden;
     background: var(--card);
     color: var(--foreground);
     z-index: 9999;
@@ -180,14 +182,16 @@
   .receipt-print .receipt-content { background: var(--card) !important; }
   .receipt-print .receipt-content { border: 0; border-radius: 0; box-shadow: none; }
   .receipt-print .medical-receipt {
-    width: 80mm;
+    width: 5in;
+    height: 3in;
     box-sizing: border-box;
-    padding: 2mm !important;
+    overflow: hidden;
+    padding: 0.12in !important;
     background: #fff !important;
     color: #111 !important;
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 9px;
-    line-height: 1.25;
+    font-size: 7.5px;
+    line-height: 1.1;
   }
   .medical-receipt table { border-collapse: collapse; }
   .medical-receipt th, .medical-receipt td { overflow-wrap: anywhere; }
