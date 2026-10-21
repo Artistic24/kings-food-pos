@@ -48,7 +48,7 @@ const medicalIcon = `<?xml version="1.0" encoding="utf-8"?>
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <path android:fillColor="#0F766E" android:pathData="M0,0h48v48H0z" />
+    <path android:fillColor="#2563EB" android:pathData="M0,0h48v48H0z" />
     <path android:fillColor="#FFFFFFFF" android:pathData="M20,8h8v12h12v8H28v12h-8V28H8v-8h12z" />
 </vector>
 `;
@@ -131,7 +131,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
                 }
 
                 PrintAttributes attributes = new PrintAttributes.Builder()
-                    .setMediaSize(PrintAttributes.MediaSize.UNKNOWN_PORTRAIT)
+                    .setMediaSize(new PrintAttributes.MediaSize("MEDICAL_INDEX_CARD_5X3", "Index card 5 x 3 in", 5000, 3000))
                     .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
                     .build();
 
