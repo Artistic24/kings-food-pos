@@ -50,6 +50,7 @@ export type Order = {
   tendered?: number;
   status: OrderStatus;
   createdAt: number;
+  printedAt?: number;
 };
 
 export type PaymentMethod = {
