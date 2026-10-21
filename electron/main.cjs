@@ -7,7 +7,7 @@ const { archivePrintedReceipt, savePrintedReceiptPdf, archivePrintedSpending, op
 
 app.setName("Medical Centre POS");
 
-const PORT = 0;
+const PORT = 4173; // Stable localhost origin so IndexedDB data survives app restarts.
 const DIST_DIR = path.join(__dirname, "..", "dist");
 
 const MIME_TYPES = {
@@ -194,7 +194,7 @@ async function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: "#fffaf4",
+    backgroundColor: "#f4f9ff",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
