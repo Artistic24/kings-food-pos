@@ -9,10 +9,10 @@ on:
 permissions:
   contents: write
 
-# Do not cancel a valid release build just because another commit lands.
+# Prefer the newest release source; older builds from earlier commits must not block or overwrite it.
 concurrency:
   group: medical-centre-windows-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-windows:
