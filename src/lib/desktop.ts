@@ -74,6 +74,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   const ref = String(data.ref || ("KF-" + createdAt));
+  const patientDisplayName = String(data.customer || data.patientName || data.patient || "").trim();
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Medical Centre POS";
   workbook.created = new Date();
@@ -111,7 +112,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
         ref: index === 0 ? ref : "",
         reference: index === 0 ? (data.reference || "") : "",
         receiptKind: index === 0 ? (data.receiptKind === "pharmacy" ? "Pharmacie" : "Caisse") : "",
-        customer: index === 0 ? (data.customer || "") : "",
+        customer: index === 0 ? patientDisplayName : "",
         phone: index === 0 ? (data.phone || "") : "",
         patientCode: index === 0 ? (data.patientCode || "") : "",
         service: index === 0 ? (data.service || "LABORATOIRE") : "",
@@ -162,7 +163,7 @@ async function createAndroidExcelReceipt(kind: "sale" | "spending", data: any) {
   const buffer = await workbook.xlsx.writeBuffer();
   const safeRef = ref.replace(/[^a-zA-Z0-9_-]/g, "_");
   const prefix = kind === "sale" ? "Medical-Centre-Receipt" : "Medical-Centre-Spending";
-  const safePatient = String(data.customer || "Patient")
+  const safePatient = String(patientDisplayName || "Patient")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9_-]+/g, "_")
@@ -194,23 +195,24 @@ export async function printReceiptAndArchive(
   settings: Partial<Settings>,
 ): Promise<{ printed: boolean; archived: boolean; pdfSaved?: boolean; fallback: boolean; message?: string }> {
   if (isAndroidApp()) {
-    const sale = order as { customer?: string; ref?: string; createdAt?: number };
-    const patientName = String(sale.customer || "Patient").normalize("NFKD")
+    const sale = order as { customer?: string; patientName?: string; patient?: string; ref?: string; createdAt?: number };
+    const patientName = String(sale.customer || sale.patientName || sale.patient || "").trim() || "Patient";
+    const normalizedPatientName = patientName.normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 _-]+/g, "").trim() || "Patient";
-    const safePatient = patientName.replace(/\s+/g, "_");
+    const safePatient = normalizedPatientName.replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "Patient";
     const receiptRef = String(sale.ref || "Receipt").replace(/[^a-zA-Z0-9_-]/g, "_");
     const jobName = "Receipt - " + patientName + " - " + receiptRef;
     const printed = await AndroidPrinter.printCurrentPage({ jobName });
     if (!printed.success) {
       return { printed: false, archived: false, fallback: false, message: printed.failureReason || "Android printing was cancelled or failed." };
     }
-    const archived = await createAndroidExcelReceipt("sale", order);
+    const archived = await createAndroidExcelReceipt("sale", { ...(order as object), customer: patientName });
     const date = new Date(Number(sale.createdAt || Date.now()));
     let pdfSaved = false;
     let pdfPath = "";
     try {
       const pdf = await AndroidPrinter.saveReceiptPdf({
-        base64: generateReceiptPdfBase64(order as Order, settings),
+        base64: generateReceiptPdfBase64({ ...(order as Order), customer: patientName }, settings),
         fileName: safePatient + "_" + receiptRef + ".pdf",
         year: String(date.getFullYear()),
         month: String(date.getMonth() + 1).padStart(2, "0"),
