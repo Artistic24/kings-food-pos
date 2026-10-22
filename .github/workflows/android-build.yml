@@ -133,20 +133,20 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Keep existing APK asset until stable signing is configured
+      - name: Warn about temporary signing identity
         if: env.MEDICAL_POS_STABLE_SIGNING != 'true'
         run: |
-          echo "::notice::The APK was built and uploaded as a workflow artifact, but the existing release APK was preserved. Configure MEDICAL_POS_KEYSTORE_BASE64, MEDICAL_POS_KEYSTORE_PASSWORD, MEDICAL_POS_KEY_ALIAS, and MEDICAL_POS_KEY_PASSWORD repository secrets before publishing so installed Android apps can be updated without a signature mismatch."
+          echo "::warning::Publishing with a temporary signing key. This APK may not update an existing installation; users may need to uninstall the old app first, which can delete local data."
 
       - name: Publish APK to the versioned GitHub Release
-        if: env.MEDICAL_POS_STABLE_SIGNING == 'true' && ((startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-medical')) || github.ref == 'refs/heads/release/medical-centre-v1.3.0')
+        if: (env.MEDICAL_POS_STABLE_SIGNING == 'true' && startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-medical')) || github.ref == 'refs/heads/release/medical-centre-v1.3.0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
           else
-            TAG="v${{ steps.version.outputs.version }}"
+            TAG="v1.3.0-medical.3"
           fi
           TITLE="Medical Centre POS ${{ steps.version.outputs.version }}"
           ASSET="Medical-Centre-POS-${{ steps.version.outputs.version }}.apk"
