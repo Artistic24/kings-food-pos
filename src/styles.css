@@ -162,40 +162,59 @@
 .receipt-print { display: none; }
 
 @media print {
-  @page { size: auto; margin: 6mm; }
-  body > [data-state="open"] { display: none !important; }
-  body * { visibility: hidden !important; }
-  .receipt-print, .receipt-print * { visibility: visible !important; }
+  /* Respect the selected printer/page size, but never rotate the receipt to landscape. */
+  @page { size: auto portrait; margin: 0; }
+  html, body, #root {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body { background: #fff !important; }
+  /* Flatten only ancestors of the receipt so the rest of the POS UI cannot create blank pages. */
+  body:has(.receipt-print) *:has(.receipt-print) { display: contents !important; }
+  body:has(.receipt-print) *:not(:has(.receipt-print)):not(.receipt-print):not(.receipt-print *) {
+    display: none !important;
+  }
   .receipt-print {
     display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: auto;
-    min-height: 0;
-    height: auto;
-    overflow: visible;
-    background: var(--card);
-    color: var(--foreground);
-    z-index: 9999;
-  }
-  body { background: var(--card) !important; }
-  .receipt-print .receipt-content { background: var(--card) !important; }
-  .receipt-print .receipt-content { border: 0; border-radius: 0; box-shadow: none; }
-  .receipt-print .medical-receipt {
-    width: auto;
-    height: auto;
-    min-height: 0;
-    box-sizing: border-box;
-    overflow: visible;
-    padding: 0.12in !important;
+    visibility: visible !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 80mm;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #fff !important;
     color: #111 !important;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 7.5px;
-    line-height: 1.1;
+    z-index: 9999;
+    break-before: avoid !important;
+    break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
   }
-  .medical-receipt table { border-collapse: collapse; }
+  .receipt-print, .receipt-print * { visibility: visible !important; }
+  .receipt-print .receipt-content, .receipt-print .medical-receipt {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #111 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 9px !important;
+    line-height: 1.25 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .medical-receipt table { width: 100% !important; border-collapse: collapse; table-layout: fixed; }
   .medical-receipt th, .medical-receipt td { overflow-wrap: anywhere; }
   .no-print { display: none !important; }
 }
