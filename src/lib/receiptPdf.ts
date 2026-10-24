@@ -71,26 +71,22 @@ function pdfLiteral(value: string): string {
   return out + ")";
 }
 
-function renderTextLine(line: PdfLine, y: number): string {
+function renderTextLine(line: PdfLine, y: number, pageWidth: number): string {
   const size = line.size ?? 10;
   const font = line.bold ? "F2" : "F1";
   const approximateWidth = line.text.length * size * 0.5;
-  const x = line.center ? Math.max(12, (360 - approximateWidth) / 2) : 12;
+  const x = line.center ? Math.max(12, (pageWidth - approximateWidth) / 2) : 12;
   return "BT /" + font + " " + size + " Tf 1 0 0 1 " +
     x.toFixed(2) + " " + y.toFixed(2) + " Tm " +
     pdfLiteral(line.text) + " Tj ET";
 }
 
-function createPdf(lines: PdfLine[]): string {
-  const perPage = 18;
-  const pages: PdfLine[][] = [];
-  for (let index = 0; index < lines.length; index += perPage) {
-    const pageLines = lines.slice(index, index + perPage);
-    if (index > 0) {
-      pageLines.unshift({ text: "Receipt continued", size: 9, bold: true });
-    }
-    pages.push(pageLines);
-  }
+function createPdf(lines: PdfLine[], format = "index-3x5"): string {
+  const pageWidth = format === "a4" ? 595.28 : format === "a5" ? 419.53 : format === "thermal-58" ? 164.4 : format === "thermal-80" ? 226.8 : 360;
+  const margin = format.startsWith("thermal") ? 6 : 12;
+  const lineGap = format.startsWith("thermal") ? 11 : 12;
+  const pageHeight = Math.max(format === "a4" ? 841.89 : format === "a5" ? 595.28 : format === "thermal-58" || format === "thermal-80" ? 180 : 216, lines.length * lineGap + 2 * margin + 10);
+  const pages = [lines];
 
   const objects = new Map<number, string>();
   const pageIds: number[] = [];
@@ -103,10 +99,10 @@ function createPdf(lines: PdfLine[]): string {
     const contentId = pageId + 1;
     pageIds.push(pageId);
     const stream = pageLines.map((line, lineIndex) =>
-      renderTextLine(line, 204 - lineIndex * 10),
+      renderTextLine(line, pageHeight - margin - 12 - lineIndex * lineGap, pageWidth),
     ).join("\n");
     objects.set(pageId,
-      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 360 216] " +
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + pageWidth + " " + pageHeight + "] " +
       "/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents " +
       contentId + " 0 R >>");
     objects.set(contentId, "<< /Length " + stream.length + " >>\nstream\n" + stream + "\nendstream");
@@ -204,6 +200,6 @@ export function generateReceiptPdfBase64(order: Order, settings: Partial<Setting
     add(settings.receiptFooter, { center: true });
   }
 
-  const pdf = createPdf(lines);
+  const pdf = createPdf(lines, settings.receiptFormat || "index-3x5");
   return btoa(pdf);
 }
