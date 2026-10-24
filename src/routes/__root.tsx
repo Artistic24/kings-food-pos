@@ -127,6 +127,15 @@ const NAV = [
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootLayout />
+    </QueryClientProvider>
+  );
+}
+
+function RootLayout() {
+  const { queryClient } = Route.useRouteContext();
   const { data: appSettings = DEFAULT_SETTINGS } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
 
   useEffect(() => {
