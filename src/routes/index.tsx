@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PayQR } from "@/components/PayQR";
 import { Receipt } from "@/components/Receipt";
-import { printReceiptAndArchive } from "@/lib/desktop";
+import { isAndroidApp, printReceiptAndArchive } from "@/lib/desktop";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -164,9 +164,9 @@ function PosPage() {
         setReceipt(printedReceipt);
         qc.invalidateQueries({ queryKey: ["orders"] });
         if (result.archived) {
-          toast.success("Receipt printed and saved to Excel");
+          toast.success(result.message || (isAndroidApp() ? "Receipt saved as PDF and Excel" : "Receipt printed and saved to Excel"));
         } else {
-          toast.warning(result.message || "Receipt printed, but receipt archiving failed");
+          toast.warning(result.message || (isAndroidApp() ? "Receipt export was incomplete" : "Receipt printed, but receipt archiving failed"));
         }
       } else if (result.fallback) {
         toast.info(result.message || "Browser print dialog opened");
@@ -422,7 +422,7 @@ function PosPage() {
           </DialogHeader>
           {receipt && <Receipt order={receipt} settings={settings} />}
           <Button className="rounded-full no-print" disabled={Boolean(receipt?.printedAt)} onClick={() => void printCurrentReceipt()}>
-            {receipt?.printedAt ? <><Check className="size-4" /> Printed</> : <><Printer className="size-4" /> Print receipt</>}
+            {receipt?.printedAt ? <><Check className="size-4" /> {isAndroidApp() ? "Saved" : "Printed"}</> : <><Printer className="size-4" /> {isAndroidApp() ? "Save PDF + Excel" : "Print receipt"}</>}
           </Button>
         </DialogContent>
       </Dialog>
