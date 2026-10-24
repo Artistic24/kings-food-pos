@@ -91,6 +91,7 @@ export type Settings = {
   payments: PaymentMethod[];
   printerName?: string;
   receiptLogo?: string;
+  receiptFormat?: "index-3x5" | "thermal-58" | "thermal-80" | "a5" | "a4";
   cashierName?: string;
   consultingPhysicians?: string[];
 };
