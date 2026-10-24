@@ -63,7 +63,9 @@ const pluginJava = `package com.kingshealth.medicalpos;
 
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.ContentUris;
 import android.content.Context;
+import android.database.Cursor;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -202,6 +204,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
         }
 
         Uri savedUri = null;
+        boolean createdNew = false;
         String savedPath;
         try {
             byte[] pdfBytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT);
@@ -212,14 +215,35 @@ public class KingsFoodPrinterPlugin extends Plugin {
 
             String safeFileName = new File(fileName).getName();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                String relativePath = Environment.DIRECTORY_DOWNLOADS + "/Medical Centre POS/Receipts/" + year + "/" + month + "/";
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.Downloads.DISPLAY_NAME, safeFileName);
                 values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
-                values.put(MediaStore.Downloads.RELATIVE_PATH,
-                    Environment.DIRECTORY_DOWNLOADS + "/Medical Centre POS/Receipts/" + year + "/" + month + "/");
+                values.put(MediaStore.Downloads.RELATIVE_PATH, relativePath);
                 values.put(MediaStore.Downloads.IS_PENDING, 1);
-                savedUri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-                if (savedUri == null) throw new Exception("Android could not create the PDF file");
+
+                String selection = MediaStore.Downloads.DISPLAY_NAME + "=? AND " + MediaStore.Downloads.RELATIVE_PATH + "=?";
+                String[] selectionArgs = new String[] { safeFileName, relativePath };
+                try (Cursor cursor = getContext().getContentResolver().query(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    new String[] { MediaStore.Downloads._ID },
+                    selection, selectionArgs, MediaStore.Downloads._ID + " ASC")) {
+                    if (cursor != null) {
+                        while (cursor.moveToNext()) {
+                            Uri existing = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(0));
+                            if (savedUri == null) savedUri = existing;
+                            else getContext().getContentResolver().delete(existing, null, null);
+                        }
+                    }
+                }
+
+                if (savedUri == null) {
+                    savedUri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    createdNew = true;
+                    if (savedUri == null) throw new Exception("Android could not create the PDF file");
+                } else {
+                    getContext().getContentResolver().update(savedUri, values, null, null);
+                }
 
                 OutputStream output = getContext().getContentResolver().openOutputStream(savedUri, "w");
                 if (output == null) throw new Exception("Android could not open the PDF file");
@@ -251,7 +275,7 @@ public class KingsFoodPrinterPlugin extends Plugin {
             ret.put("path", savedPath);
             call.resolve(ret);
         } catch (Exception e) {
-            if (savedUri != null) {
+            if (createdNew && savedUri != null) {
                 try { getContext().getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
             }
             call.reject("Could not save PDF receipt", e);
@@ -282,13 +306,32 @@ public class KingsFoodPrinterPlugin extends Plugin {
                 values.put(MediaStore.Downloads.RELATIVE_PATH, relative);
                 values.put(MediaStore.Downloads.IS_PENDING, 1);
 
-                Uri uri = getContext().getContentResolver().insert(
+                Uri uri = null;
+                boolean createdNew = false;
+                String selection = MediaStore.Downloads.DISPLAY_NAME + "=? AND " + MediaStore.Downloads.RELATIVE_PATH + "=?";
+                String[] selectionArgs = new String[] { fileName, relative };
+                try (Cursor cursor = getContext().getContentResolver().query(
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                    values
-                );
-                if (uri == null) throw new Exception("Android could not create the Excel file");
+                    new String[] { MediaStore.Downloads._ID },
+                    selection, selectionArgs, MediaStore.Downloads._ID + " ASC")) {
+                    if (cursor != null) {
+                        while (cursor.moveToNext()) {
+                            Uri existing = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(0));
+                            if (uri == null) uri = existing;
+                            else getContext().getContentResolver().delete(existing, null, null);
+                        }
+                    }
+                }
 
-                try (OutputStream out = getContext().getContentResolver().openOutputStream(uri)) {
+                if (uri == null) {
+                    uri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    createdNew = true;
+                    if (uri == null) throw new Exception("Android could not create the Excel file");
+                } else {
+                    getContext().getContentResolver().update(uri, values, null, null);
+                }
+
+                try (OutputStream out = getContext().getContentResolver().openOutputStream(uri, "w")) {
                     if (out == null) throw new Exception("Android could not open the Excel file");
                     out.write(data);
                     out.flush();
