@@ -193,7 +193,7 @@ export async function getDesktopPrinters(): Promise<DesktopPrinter[]> {
 export async function printReceiptAndArchive(
   order: unknown,
   settings: Partial<Settings>,
-): Promise<{ printed: boolean; archived: boolean; pdfSaved?: boolean; fallback: boolean; message?: string }> {
+): Promise<{ printed: boolean; saved?: boolean; archived: boolean; pdfSaved?: boolean; fallback: boolean; message?: string }> {
   if (isAndroidApp()) {
     const sale = order as { customer?: string; patientName?: string; patient?: string; ref?: string; createdAt?: number };
     const patientName = String(sale.customer || sale.patientName || sale.patient || "").trim() || "Patient";
@@ -223,12 +223,13 @@ export async function printReceiptAndArchive(
     }
     const success = archived.success && pdfSaved;
     return {
-      printed: success,
+      printed: false,
+      saved: success,
       archived: archived.success,
       pdfSaved,
       fallback: !success,
       message: success
-        ? "Saved one patient-named PDF and one Excel receipt: " + pdfPath
+        ? "Saved one patient-named PDF and one Excel receipt. You can print the receipt now: " + pdfPath
         : archived.success
           ? "Excel saved, but PDF export failed: " + pdfPath
           : pdfSaved
@@ -281,6 +282,26 @@ export async function printReceiptAndArchive(
     fallback: Boolean(archived.fallback) || !pdf.success,
     message,
   };
+}
+
+
+export async function printSavedReceipt(): Promise<{ success: boolean; message?: string }> {
+  if (isAndroidApp()) {
+    const result = await AndroidPrinter.printCurrentPage({ jobName: "Medical Centre Patient Receipt" });
+    return {
+      success: Boolean(result.success),
+      message: result.success
+        ? "Receipt sent to the print system."
+        : result.failureReason || "Printing was cancelled or no printer is available.",
+    };
+  }
+  const desktop = window.kingsFoodDesktop;
+  if (desktop) {
+    const result = await desktop.printReceipt({});
+    return { success: Boolean(result.success), message: result.failureReason || (result.success ? "Receipt printed." : "Printing failed.") };
+  }
+  window.print();
+  return { success: true, message: "Print dialog opened. Confirm printing in the dialog." };
 }
 
 export async function printSpendingAndArchive(
