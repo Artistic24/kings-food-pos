@@ -91,7 +91,7 @@ export type Settings = {
   payments: PaymentMethod[];
   printerName?: string;
   receiptLogo?: string;
-  receiptFormat?: "index-3x5" | "thermal-58" | "thermal-80" | "a5" | "a4";
+  receiptFormat?: "index-3x5" | "index-4x6" | "index-5x8" | "foolscap" | "government-letter" | "junior-legal" | "ledger" | "legal" | "letter" | "monarch" | "quarto" | "tabloid" | "ansi-c" | "ansi-d" | "ansi-e" | "arch-b" | "arch-c" | "arch-d" | "arch-e" | "arch-e1" | "iso-a0" | "iso-a1" | "iso-a2" | "iso-a3" | "iso-a4" | "iso-a5" | "iso-a6" | "iso-a7" | "iso-a8" | "iso-a9" | "iso-a10" | "iso-c5" | "iso-c6" | "iso-c7" | "iso-c8" | "iso-c9" | "photo-l" | "super-b" | "chou2" | "chou3" | "chou4" | "hagaki" | "jis-b0" | "jis-b1" | "jis-b2" | "jis-b3" | "jis-b4" | "jis-b5" | "jis-b6" | "jis-b7" | "jis-b8" | "jis-b9" | "jis-b10" | "thermal-58" | "thermal-80" | "a4" | "a5";
   cashierName?: string;
   consultingPhysicians?: string[];
 };
