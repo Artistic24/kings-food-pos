@@ -53,7 +53,7 @@ declare global {
 }
 
 
-function isAndroidApp() {
+export function isAndroidApp() {
   return Capacitor.getPlatform() === "android" && Capacitor.isNativePlatform();
 }
 
