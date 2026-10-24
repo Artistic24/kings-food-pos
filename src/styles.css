@@ -162,7 +162,7 @@
 .receipt-print { display: none; }
 
 @media print {
-  @page { size: 5in 3in; margin: 0; }
+  @page { size: auto; margin: 6mm; }
   body > [data-state="open"] { display: none !important; }
   body * { visibility: hidden !important; }
   .receipt-print, .receipt-print * { visibility: visible !important; }
@@ -171,9 +171,10 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 5in;
-    height: 3in;
-    overflow: hidden;
+    width: auto;
+    min-height: 0;
+    height: auto;
+    overflow: visible;
     background: var(--card);
     color: var(--foreground);
     z-index: 9999;
@@ -182,10 +183,11 @@
   .receipt-print .receipt-content { background: var(--card) !important; }
   .receipt-print .receipt-content { border: 0; border-radius: 0; box-shadow: none; }
   .receipt-print .medical-receipt {
-    width: 5in;
-    height: 3in;
+    width: auto;
+    height: auto;
+    min-height: 0;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
     padding: 0.12in !important;
     background: #fff !important;
     color: #111 !important;
