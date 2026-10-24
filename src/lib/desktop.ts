@@ -198,16 +198,15 @@ export async function printReceiptAndArchive(
     const sale = order as { customer?: string; patientName?: string; patient?: string; ref?: string; createdAt?: number };
     const patientName = String(sale.customer || sale.patientName || sale.patient || "").trim() || "Patient";
     const normalizedPatientName = patientName.normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 _-]+/g, "").trim() || "Patient";
-    const safePatient = normalizedPatientName.replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "Patient";
+      .replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-zA-Z0-9 _-]+/g, "").trim() || "Patient";
+    const safePatient = normalizedPatientName.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "Patient";
     const receiptRef = String(sale.ref || "Receipt").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const jobName = "Receipt - " + patientName + " - " + receiptRef;
-    const printed = await AndroidPrinter.printCurrentPage({ jobName });
-    if (!printed.success) {
-      return { printed: false, archived: false, fallback: false, message: printed.failureReason || "Android printing was cancelled or failed." };
-    }
-    const archived = await createAndroidExcelReceipt("sale", { ...(order as object), customer: patientName });
     const date = new Date(Number(sale.createdAt || Date.now()));
+
+    // Save one correctly formatted PDF plus one Excel file directly from receipt data.
+    // Do not open WebView print preview here: Android's generic "Medical Centre POS (n)"
+    // Save-as-PDF output duplicates this export and can paginate the full app into many pages.
+    const archived = await createAndroidExcelReceipt("sale", { ...(order as object), customer: patientName });
     let pdfSaved = false;
     let pdfPath = "";
     try {
@@ -222,18 +221,19 @@ export async function printReceiptAndArchive(
     } catch (error) {
       pdfPath = error instanceof Error ? error.message : String(error);
     }
+    const success = archived.success && pdfSaved;
     return {
-      printed: true,
+      printed: success,
       archived: archived.success,
       pdfSaved,
-      fallback: !archived.success || !pdfSaved,
-      message: archived.success && pdfSaved
-        ? "Receipt printed; Excel and PDF saved."
+      fallback: !success,
+      message: success
+        ? "Saved one patient-named PDF and one Excel receipt: " + pdfPath
         : archived.success
-          ? "Receipt saved to Excel, but PDF export failed: " + pdfPath
+          ? "Excel saved, but PDF export failed: " + pdfPath
           : pdfSaved
-            ? "Receipt saved to PDF, but Excel export failed."
-            : "Receipt printed, but Excel and PDF saving failed.",
+            ? "PDF saved, but Excel export failed."
+            : "Could not save the PDF and Excel receipt.",
     };
   }
 
