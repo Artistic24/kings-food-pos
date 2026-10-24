@@ -215,7 +215,11 @@ function SettingsPage() {
       </section>
 
       <section className="grid gap-3 rounded-2xl bg-card p-4 shadow-soft md:grid-cols-2">
-        <h2 className="font-display font-bold md:col-span-2">Établissement</h2>
+        <h2 className="font-display font-bold md:col-span-2">Business identity & receipt format</h2>
+        <p className="text-xs text-muted-foreground md:col-span-2">Set the business name and default PDF paper format. The business name and uploaded logo appear on receipts and in the app header.</p>
+        {field("Business / app name", "businessName")}
+        <div className="space-y-1.5"><Label>Default receipt / PDF format</Label><select value={s.receiptFormat ?? "index-3x5"} onChange={(e) => setS({ ...s, receiptFormat: e.target.value as Settings["receiptFormat"] })} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="index-3x5">Index card 3 × 5 in</option><option value="thermal-58">Thermal receipt 58 mm</option><option value="thermal-80">Thermal receipt 80 mm</option><option value="a5">A5 paper</option><option value="a4">A4 paper</option></select></div>
+        <h2 className="font-display font-bold md:col-span-2">Business details</h2>
         <div className="space-y-2 md:col-span-2">
           <Label>Logo du centre (facultatif)</Label>
           <div className="flex flex-wrap items-center gap-3">
