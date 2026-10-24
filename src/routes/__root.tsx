@@ -8,6 +8,8 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { DEFAULT_SETTINGS, getSettings } from "@/lib/db";
 import { ClipboardList, LayoutGrid, BarChart3, Settings as SettingsIcon, WalletCards, Stethoscope } from "lucide-react";
 
 import appCss from "../styles.css?url";
@@ -125,6 +127,7 @@ const NAV = [
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { data: appSettings = DEFAULT_SETTINGS } = useQuery({ queryKey: ["settings"], queryFn: getSettings });
 
   useEffect(() => {
     registerServiceWorker();
@@ -140,8 +143,8 @@ function RootComponent() {
         <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur no-print">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
             <Link to="/" className="flex items-center gap-2">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Stethoscope className="size-6" /></span>
-              <span className="font-display text-base font-extrabold">Medical Centre POS</span>
+              {appSettings.receiptLogo ? <span className="flex size-10 items-center justify-center overflow-hidden rounded-xl bg-card"><img src={appSettings.receiptLogo} alt="" className="h-full w-full object-contain" /></span> : <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Stethoscope className="size-6" /></span>}
+              <span className="font-display text-base font-extrabold">{appSettings.businessName || "Medical Centre POS"}</span>
             </Link>
             <nav className="hidden md:block">
               <ul className="flex gap-1">
