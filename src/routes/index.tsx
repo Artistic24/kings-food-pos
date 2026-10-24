@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PayQR } from "@/components/PayQR";
 import { Receipt } from "@/components/Receipt";
-import { isAndroidApp, printReceiptAndArchive } from "@/lib/desktop";
+import { isAndroidApp, printReceiptAndArchive, printSavedReceipt } from "@/lib/desktop";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,6 +52,8 @@ function PosPage() {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
   const [receipt, setReceipt] = useState<Order | null>(null);
+  const [receiptSaved, setReceiptSaved] = useState(false);
+  const [receiptPrinted, setReceiptPrinted] = useState(false);
 
   const methods = settings.payments.filter((p) => p.enabled);
   useEffect(() => {
@@ -157,25 +159,51 @@ function PosPage() {
   const printCurrentReceipt = async () => {
     if (!receipt) return;
     try {
+      if (isAndroidApp() && receiptSaved && !receiptPrinted) {
+        const result = await printSavedReceipt();
+        if (result.success) {
+          setReceiptPrinted(true);
+          const printedReceipt = { ...receipt, printedAt: Date.now() };
+          await saveOrder(printedReceipt);
+          setReceipt(printedReceipt);
+          qc.invalidateQueries({ queryKey: ["orders"] });
+          toast.success(result.message || "Receipt sent to the print system.");
+        } else {
+          toast.error(result.message || "Could not print the saved receipt.");
+        }
+        return;
+      }
+
       const result = await printReceiptAndArchive(receipt, settings);
+      if (isAndroidApp()) {
+        if (result.saved) {
+          setReceiptSaved(true);
+          if (result.archived && result.pdfSaved) {
+            toast.success(result.message || "Saved PDF and Excel. You can print the receipt now.");
+          } else {
+            toast.warning(result.message || "Receipt export was incomplete. Check the saved files before printing.");
+          }
+        } else if (result.message) {
+          toast.error(result.message);
+        }
+        return;
+      }
+
       if (result.printed) {
         const printedReceipt = { ...receipt, printedAt: Date.now() };
         await saveOrder(printedReceipt);
         setReceipt(printedReceipt);
         qc.invalidateQueries({ queryKey: ["orders"] });
-        if (result.archived) {
-          toast.success(result.message || (isAndroidApp() ? "Receipt saved as PDF and Excel" : "Receipt printed and saved to Excel"));
-        } else {
-          toast.warning(result.message || (isAndroidApp() ? "Receipt export was incomplete" : "Receipt printed, but receipt archiving failed"));
-        }
+        if (result.archived) toast.success(result.message || "Receipt printed and saved.");
+        else toast.warning(result.message || "Receipt printed, but receipt archiving failed.");
       } else if (result.fallback) {
         toast.info(result.message || "Browser print dialog opened");
       } else if (result.message) {
         toast.error(result.message);
       }
     } catch (error) {
-      console.error("Receipt print/archive failed:", error);
-      toast.error("Could not complete the receipt print.");
+      console.error("Receipt save/print failed:", error);
+      toast.error("Could not complete the receipt save or print.");
     }
   };
 
@@ -421,9 +449,22 @@ function PosPage() {
             <DialogTitle className="font-display">Aperçu du reçu</DialogTitle>
           </DialogHeader>
           {receipt && <Receipt order={receipt} settings={settings} />}
-          <Button className="rounded-full no-print" disabled={Boolean(receipt?.printedAt)} onClick={() => void printCurrentReceipt()}>
-            {receipt?.printedAt ? <><Check className="size-4" /> {isAndroidApp() ? "Saved" : "Printed"}</> : <><Printer className="size-4" /> {isAndroidApp() ? "Save PDF + Excel" : "Print receipt"}</>}
-          </Button>
+          <div className="flex flex-wrap gap-2 no-print">
+            <Button className="rounded-full" disabled={isAndroidApp() && receiptSaved} onClick={() => void printCurrentReceipt()}>
+              {isAndroidApp()
+                ? receiptSaved
+                  ? <><Check className="size-4" /> Saved</>
+                  : <><Check className="size-4" /> Save PDF + Excel</>
+                : receipt?.printedAt
+                  ? <><Check className="size-4" /> Printed</>
+                  : <><Printer className="size-4" /> Print receipt</>}
+            </Button>
+            {isAndroidApp() && receiptSaved && (
+              <Button className="rounded-full" disabled={receiptPrinted} onClick={() => void printCurrentReceipt()}>
+                {receiptPrinted ? <><Check className="size-4" /> Printed</> : <><Printer className="size-4" /> Print</>}
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
       {receipt && <div className="receipt-print"><Receipt order={receipt} settings={settings} /></div>}
