@@ -198,7 +198,7 @@ export async function printReceiptAndArchive(
     const sale = order as { customer?: string; patientName?: string; patient?: string; ref?: string; createdAt?: number };
     const patientName = String(sale.customer || sale.patientName || sale.patient || "").trim() || "Patient";
     const normalizedPatientName = patientName.normalize("NFKD")
-      .replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-zA-Z0-9 _-]+/g, "").trim() || "Patient";
+      .replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9 _-]+/g, "").trim() || "Patient";
     const safePatient = normalizedPatientName.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "Patient";
     const receiptRef = String(sale.ref || "Receipt").replace(/[^a-zA-Z0-9_-]/g, "_");
     const date = new Date(Number(sale.createdAt || Date.now()));
