@@ -87,7 +87,7 @@ function SettingsPage() {
         <div className="rounded-xl border border-border bg-muted/50 p-3 text-sm">
           <p className="font-semibold">Print preview</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Every POS or Spending receipt opens Android print preview first. Choose the printer, paper size and copies, then confirm Print.
+            Patient receipts save directly as one patient-named PDF and one Excel file. Spending receipts can still use Android print preview. PDF paper size is configured below; the app-generated receipt PDF stays portrait.
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
