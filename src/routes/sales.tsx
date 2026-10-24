@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Receipt } from "@/components/Receipt";
-import { printReceiptAndArchive } from "@/lib/desktop";
+import { isAndroidApp, printReceiptAndArchive } from "@/lib/desktop";
 
 export const Route = createFileRoute("/sales")({ component: SalesPage, head: () => ({ meta: [{ title: "Historique — Centre médical" }] }) });
 
@@ -73,7 +73,7 @@ function SalesPage(){
    <div className="relative"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"/><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher par patient, code patient ou reçu" className="rounded-full pl-9"/></div>
    {orders.length===0 ? <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">Aucun reçu enregistré.</p> : filteredOrders.length===0 ? <p className="rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">Aucun reçu correspondant.</p> : <ul className="space-y-2">{filteredOrders.map(o=><li key={o.id}><button onClick={()=>setOpen(o)} className="flex w-full items-center justify-between rounded-2xl bg-card p-3 text-left shadow-soft"><div><p className="text-sm font-semibold">{o.mode==="medical" ? (o.customer || "Patient") : o.mode==="table" ? "Table "+o.table : "Delivery · "+o.zone}</p><p className="text-[11px] text-muted-foreground">Receipt: {o.ref} · {dateOf(o.createdAt)} {timeOf(o.createdAt)} · {STATUS_LABEL[o.status]}</p>{o.reference&&<p className="text-[11px] text-muted-foreground">Reference: {o.reference}</p>}</div><span className="font-display font-bold text-primary">{fcfa(o.total)}</span></button></li>)}</ul>}
   </section>
-  <Dialog open={!!open} onOpenChange={v=>!v&&setOpen(null)}><DialogContent className="max-h-[88vh] overflow-y-auto"><DialogHeader><DialogTitle>Receipt</DialogTitle></DialogHeader>{open&&<Receipt order={open} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>void printOpenReceipt()}><Printer className="size-4"/> Print</Button></DialogContent></Dialog>{open&&<div className="receipt-print"><Receipt order={open} settings={settings}/></div>}
+  <Dialog open={!!open} onOpenChange={v=>!v&&setOpen(null)}><DialogContent className="max-h-[88vh] overflow-y-auto"><DialogHeader><DialogTitle>Receipt</DialogTitle></DialogHeader>{open&&<Receipt order={open} settings={settings}/>}<Button className="rounded-full no-print" onClick={()=>void printOpenReceipt()}><Printer className="size-4"/> {isAndroidApp() ? "Save PDF + Excel" : "Print"}</Button></DialogContent></Dialog>{open&&<div className="receipt-print"><Receipt order={open} settings={settings}/></div>}
  </div>
 }
 function RevenueChart({title,data}:{title:string;data:{label:string;value:number}[]}){
