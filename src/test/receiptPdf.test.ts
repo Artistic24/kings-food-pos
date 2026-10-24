@@ -32,7 +32,9 @@ describe("patient receipt PDF generation", () => {
     expect(pdf.startsWith("%PDF-1.4")).toBe(true);
     expect(pdf).toContain("PATIENT SMITH");
     expect(pdf).toContain("MC-123");
-    expect(pdf).toContain("Full blood count");
+    // Narrow receipt paper wraps long item names across adjacent rows.
+    expect(pdf).toContain("Full blood");
+    expect(pdf).toContain("count");
     expect(pdf).toContain("%%EOF");
   });
 });
